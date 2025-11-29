@@ -1,0 +1,182 @@
+/* Ionic Core CSS */
+@import '@ionic/react/css/core.css';
+
+/* Basic CSS for apps built with Ionic */
+@import '@ionic/react/css/normalize.css';
+@import '@ionic/react/css/structure.css';
+@import '@ionic/react/css/typography.css';
+
+/* Optional CSS utils that can be commented out */
+@import '@ionic/react/css/padding.css';
+@import '@ionic/react/css/float-elements.css';
+@import '@ionic/react/css/text-alignment.css';
+@import '@ionic/react/css/text-transformation.css';
+@import '@ionic/react/css/flex-utils.css';
+@import '@ionic/react/css/display.css';
+
+@import "tailwindcss";
+
+@import "tailwindcss";
+
+@import "tailwindcss";
+
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* macOS Light Theme */
+    --background: 0 0% 96%;
+    /* Cinza muito claro, quase branco (App background) */
+    --foreground: 0 0% 0%;
+    /* Preto (Texto principal) */
+
+    --card: 0 0% 100%;
+    /* Branco puro */
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    /* macOS Blue */
+    --primary: 211 100% 50%;
+    /* System Blue */
+    --primary-foreground: 0 0% 100%;
+
+    /* macOS Gray (Secondary) */
+    --secondary: 0 0% 90%;
+    /* System Gray 6 */
+    --secondary-foreground: 0 0% 0%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    /* Secondary Label Color */
+
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    /* macOS Red */
+    --destructive: 360 100% 45%;
+    /* System Red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 85%;
+    /* Separator Color */
+    --input: 0 0% 100%;
+    --ring: 211 100% 50%;
+    /* Focus Ring */
+
+    --radius: 0.75rem;
+    /* 12px - Cantos mais arredondados */
+  }
+
+  .dark {
+    /* macOS Dark Theme */
+    --background: 0 0% 10%;
+    /* Dark background */
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 18%;
+    /* Dark Gray surface */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 18%;
+    --popover-foreground: 0 0% 100%;
+
+    /* macOS Blue Dark */
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 25%;
+    /* System Gray 5 Dark */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 25%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 360 100% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 25%;
+    --input: 0 0% 20%;
+    --ring: 211 100% 50%;
+  }
+
+  /* Aplicação global de background e cor */
+  body,
+  ion-app,
+  ion-content,
+  ion-page {
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    --background: hsl(var(--background));
+    --color: hsl(var(--foreground));
+
+    /* Variáveis específicas do Ionic */
+    --ion-background-color: hsl(var(--background));
+    --ion-text-color: hsl(var(--foreground));
+    --ion-item-background: hsl(var(--card));
+    --ion-card-background: hsl(var(--card));
+
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Forçar dark mode explicitamente quando a classe dark estiver presente */
+  .dark body,
+  .dark ion-app,
+  .dark ion-content,
+  .dark ion-page {
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    --ion-background-color: hsl(var(--background));
+    --ion-text-color: hsl(var(--foreground));
+  }
+
+  /* Forçar background dos cards do Ionic se houver */
+  ion-card {
+    --background: hsl(var(--card));
+    --color: hsl(var(--card-foreground));
+  }
+}
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Animações suaves estilo macOS */
+  --animate-in: fade-in 0.2s ease-out;
+  --animate-out: fade-out 0.2s ease-in;
+}
+
+/* Utilitários globais para glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .glass {
+  background: rgba(30, 30, 30, 0.7);
+}
