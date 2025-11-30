@@ -8,29 +8,37 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { PrivateRoute } from './components/PrivateRoute';
+import { useNotifications } from './hooks/useNotifications';
 
 setupIonicReact();
+
+const AppShell: React.FC = () => {
+  useNotifications();
+
+  return (
+    <IonApp>
+      <IonReactRouter>
+        <IonRouterOutlet>
+          <Route exact path="/login" component={LoginPage} />
+          <PrivateRoute exact path="/dashboard" component={DashboardPage} />
+          <PrivateRoute exact path="/transactions" component={TransactionsPage} />
+          <Route exact path="/">
+            <Redirect to="/dashboard" />
+          </Route>
+        </IonRouterOutlet>
+      </IonReactRouter>
+    </IonApp>
+  );
+};
 
 const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <IonApp>
-          <IonReactRouter>
-            <IonRouterOutlet>
-              <Route exact path="/login" component={LoginPage} />
-              <PrivateRoute exact path="/dashboard" component={DashboardPage} />
-              <PrivateRoute exact path="/transactions" component={TransactionsPage} />
-              <Route exact path="/">
-                <Redirect to="/dashboard" />
-              </Route>
-            </IonRouterOutlet>
-          </IonReactRouter>
-        </IonApp>
+        <AppShell />
       </AuthProvider>
     </ThemeProvider>
   );
 };
 
 export default App;
-
