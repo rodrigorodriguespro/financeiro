@@ -383,16 +383,16 @@ export const TransactionsPage: React.FC = () => {
 
                     {/* Tabela de transações */}
                     <Card>
-                        <CardHeader>
+                        <CardHeader className='mb-4'>
                             <CardTitle className="text-base">Totais</CardTitle>
                             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Despesas</p>
                                     <p className="text-lg font-semibold text-red-600">
                                         {formatCurrency(totals.expenses)}
                                     </p>
                                 </div>
-                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Receitas</p>
                                     <p className="text-lg font-semibold text-green-600">
                                         {formatCurrency(totals.income)}
@@ -401,13 +401,13 @@ export const TransactionsPage: React.FC = () => {
                                         Recebidas: {formatCurrency(totals.paidIncome)}
                                     </p>
                                 </div>
-                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Pagos</p>
                                     <p className="text-lg font-semibold text-blue-600">
                                         {formatCurrency(totals.paid)}
                                     </p>
                                 </div>
-                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Não pagos</p>
                                     <p className="text-lg font-semibold text-orange-600">
                                         {formatCurrency(totals.unpaid)}
@@ -424,17 +424,17 @@ export const TransactionsPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="border-b border-border bg-muted/50">
-                                            <tr>
-                                                <th className="p-3 text-left text-sm font-medium">Data</th>
-                                                <th className="p-3 text-left text-sm font-medium">Descrição</th>
-                                                <th className="p-3 text-left text-sm font-medium">Conta</th>
-                                                <th className="p-3 text-left text-sm font-medium">Tag</th>
-                                                <th className="p-3 text-left text-sm font-medium">Meta</th>
-                                                <th className="p-3 text-center text-sm font-medium">Pago</th>
-                                                <th className="p-3 text-right text-sm font-medium">Valor</th>
-                                                <th className="p-3 text-center text-sm font-medium">Ações</th>
+                                    <table className="w-full border-separate border-spacing-0 ml-8">
+                                        <thead className="bg-muted/60">
+                                            <tr className='p-4'>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Data</th>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Descrição</th>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Conta</th>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Tag</th>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Meta</th>
+                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
+                                                <th className="p-3 text-right text-sm font-semibold text-muted-foreground">Valor</th>
+                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -448,10 +448,10 @@ export const TransactionsPage: React.FC = () => {
                                                 return (
                                                     <tr
                                                         key={transaction.id}
-                                                        className="border-b border-border last:border-0 hover:bg-muted/50"
+                                                        className="transition hover:bg-muted/40 p-8"
                                                     >
-                                                        <td className="p-3 text-sm">{formatDate(transaction.date)}</td>
-                                                        <td className="p-3 text-sm">
+                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{formatDate(transaction.date)}</td>
+                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">
                                                             {transaction.description}
                                                             {transaction.hide_from_reports && (
                                                                 <span className="ml-2 text-xs text-muted-foreground">(Oculto)</span>
@@ -460,10 +460,10 @@ export const TransactionsPage: React.FC = () => {
                                                                 <span className="ml-2 text-xs text-blue-500">(Recorrente)</span>
                                                             )}
                                                         </td>
-                                                        <td className="p-3 text-sm">{account?.name || '-'}</td>
-                                                        <td className="p-3 text-sm">{tag?.name || '-'}</td>
-                                                        <td className="p-3 text-sm">{goal?.name || '-'}</td>
-                                                        <td className="p-3 text-center">
+                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{account?.name || '-'}</td>
+                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{tag?.name || '-'}</td>
+                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{goal?.name || '-'}</td>
+                                                        <td className="p-3 text-center border-b border-border/60">
                                                             <Checkbox
                                                                 checked={transaction.is_paid}
                                                                 onChange={() => handleTogglePaid(transaction)}
@@ -471,13 +471,13 @@ export const TransactionsPage: React.FC = () => {
                                                             />
                                                         </td>
                                                         <td
-                                                            className={`p-3 text-right text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'
+                                                            className={`p-3 text-right text-sm font-semibold border-b border-border/60 ${isExpense ? 'text-red-600' : 'text-green-600'
                                                                 }`}
                                                         >
                                                             {isExpense && '-'}
                                                             {formatCurrency(parseFloat(transaction.amount.toString()))}
                                                         </td>
-                                                        <td className="p-3">
+                                                        <td className="p-3 border-b border-border/60">
                                                             <div className="flex justify-center gap-2">
                                                                 <Button
                                                                     size="icon"
