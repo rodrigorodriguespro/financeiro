@@ -132,13 +132,35 @@
     color: hsl(var(--foreground)) !important;
     --ion-background-color: hsl(var(--background));
     --ion-text-color: hsl(var(--foreground));
+    color-scheme: dark;
   }
 
   /* Forçar background dos cards do Ionic se houver */
-  ion-card {
-    --background: hsl(var(--card));
-    --color: hsl(var(--card-foreground));
-  }
+ion-card {
+  --background: hsl(var(--card));
+  --color: hsl(var(--card-foreground));
+}
+
+ion-toolbar {
+  --background: hsl(var(--card));
+  --color: hsl(var(--card-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+ion-header {
+  --background: hsl(var(--card));
+}
+
+ion-page {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Garantir fundo correto mesmo se o tema mudar após carregar */
+.ion-page {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
 }
 
 @theme {

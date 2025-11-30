@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from './ui/Dialog';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
-import { Label } from './ui/Label';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Account } from '../types';

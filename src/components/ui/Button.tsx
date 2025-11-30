@@ -7,10 +7,10 @@ const buttonVariants = cva(
     {
         variants: {
             variant: {
-                default: 'border-[#d2d2d7] bg-gradient-to-b from-white via-[#f7f7fa] to-[#e8e8ed] text-slate-900 shadow-[0_1px_0_rgba(255,255,255,0.8),0_1.5px_3px_rgba(0,0,0,0.12)] hover:shadow-[0_3px_10px_rgba(0,0,0,0.14)] active:from-[#e9e9ed] active:to-[#dcdcde]',
-                destructive: 'border-[#d43f3f] bg-gradient-to-b from-[#ff8b8b] to-[#e85656] text-white shadow-[0_1px_0_rgba(255,255,255,0.6),0_1.5px_3px_rgba(232,86,86,0.35)] hover:shadow-[0_4px_12px_rgba(232,86,86,0.4)]',
-                outline: 'border-[#d2d2d7] bg-gradient-to-b from-white via-[#fafafd] to-[#f1f1f5] text-slate-900 shadow-[0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.08)] hover:bg-[#f5f5f8]',
-                ghost: 'border-transparent bg-transparent text-slate-700 hover:bg-slate-100',
+                default: 'border-border bg-card text-card-foreground shadow-sm hover:shadow-md dark:bg-[#1c1c1f] dark:text-slate-50 dark:border-[#2f2f32]',
+                destructive: 'border-[#d43f3f] bg-gradient-to-b from-[#ff8b8b] to-[#e85656] text-white shadow-[0_1px_0_rgba(255,255,255,0.6),0_1.5px_3px_rgba(232,86,86,0.35)] hover:shadow-[0_4px_12px_rgba(232,86,86,0.4)] dark:border-[#7a1f1f] dark:bg-gradient-to-b dark:from-[#9b2323] dark:to-[#6a1717] dark:text-white dark:shadow-[0_1px_0_rgba(255,255,255,0.06),0_1.5px_4px_rgba(0,0,0,0.65)]',
+                outline: 'border-border bg-background text-foreground shadow-sm hover:bg-muted dark:bg-[#141416] dark:text-slate-50 dark:border-[#2f2f32]',
+                ghost: 'border-transparent bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-[#1c1c20]',
                 link: 'text-primary underline-offset-4 hover:underline',
             },
             size: {

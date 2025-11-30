@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IonPage, IonHeader, IonToolbar, IonContent, useIonViewWillLeave } from '@ionic/react';
+import { IonPage, IonHeader, IonToolbar, IonContent } from '@ionic/react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Transaction, Account, Tag, Goal } from '../types';
@@ -15,7 +15,7 @@ import { Edit2, Trash2, Filter, X, Settings } from 'lucide-react';
 import { useHistory } from 'react-router-dom';
 import { DatePickerWithRange } from '../components/ui/DatePickerWithRange';
 import { type DateRange } from 'react-day-picker';
-import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { Checkbox } from '../components/ui/Checkbox';
 
 export const TransactionsPage: React.FC = () => {
@@ -208,70 +208,7 @@ export const TransactionsPage: React.FC = () => {
         return d.toLocaleDateString('pt-BR');
     };
 
-    const adjustDayForMonth = (baseDay: number, target: Date) => {
-        const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-        if (baseDay === 31 && lastDay < 31) return Math.min(30, lastDay);
-        if (baseDay > lastDay) return lastDay;
-        return baseDay;
-    };
-
-    const ensureRecurringInstances = async (userId: string) => {
-        const { data: recurringTemplates } = await supabase
-            .from('transactions')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('recurrence_type', 'recurring')
-            .is('parent_transaction_id', null);
-
-        if (!recurringTemplates || recurringTemplates.length === 0) return;
-
-        const templateIds = recurringTemplates.map((t) => t.id);
-
-        const targetEnd = addMonths(new Date(), 24);
-
-        const { data: existingInstances } = await supabase
-            .from('transactions')
-            .select('id, parent_transaction_id, date')
-            .in('parent_transaction_id', templateIds)
-            .lte('date', format(targetEnd, 'yyyy-MM-dd'));
-
-        const existingMap = new Map<string, boolean>();
-        existingInstances?.forEach((i) => {
-            const key = `${i.parent_transaction_id}_${i.date}`;
-            existingMap.set(key, true);
-        });
-
-        const inserts: any[] = [];
-
-        recurringTemplates.forEach((template) => {
-            const startDate = new Date(template.date);
-            const baseDay = startDate.getDate();
-            let current = new Date(startDate);
-
-            while (current <= targetEnd) {
-                const adjustedDay = adjustDayForMonth(baseDay, current);
-                const instanceDate = new Date(current.getFullYear(), current.getMonth(), adjustedDay);
-                const dateStr = format(instanceDate, 'yyyy-MM-dd');
-                const key = `${template.id}_${dateStr}`;
-                if (!existingMap.has(key)) {
-                    inserts.push({
-                        ...template,
-                        id: undefined,
-                        parent_transaction_id: template.id,
-                        hide_from_reports: template.hide_from_reports ?? false,
-                        date: dateStr,
-                        created_at: undefined,
-                    });
-                    existingMap.set(key, true);
-                }
-                current = addMonths(current, 1);
-            }
-        });
-
-        if (inserts.length > 0) {
-            await supabase.from('transactions').insert(inserts);
-        }
-    };
+    // ...
 
     const handleTogglePaid = async (transaction: Transaction) => {
         const nextStatus = !transaction.is_paid;
@@ -321,7 +258,7 @@ export const TransactionsPage: React.FC = () => {
     return (
         <IonPage>
             <IonHeader>
-                <IonToolbar>
+                <IonToolbar className="!bg-card !text-card-foreground border-b border-border">
                     <div className="flex items-center justify-between px-4 py-2">
                         <h1 className="text-xl font-bold">Transações</h1>
                         <Button variant="outline" size="sm" onClick={() => history.push('/dashboard')}>
@@ -331,8 +268,8 @@ export const TransactionsPage: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
 
-            <IonContent className="ion-padding">
-                <div className="space-y-4 bg-background p-4">
+            <IonContent className="ion-padding !bg-background">
+                <div className="space-y-4 bg-background p-4 rounded-xl border border-border shadow-sm">
                     {/* Botões de ação */}
                     <div className="flex flex-wrap gap-2">
                         <Button onClick={() => setShowTransactionForm(true)}>
