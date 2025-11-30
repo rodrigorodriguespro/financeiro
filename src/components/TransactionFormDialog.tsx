@@ -37,6 +37,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
         tag_id: '',
         goal_id: '',
         hide_from_reports: false,
+        is_paid: false,
         recurrence_type: 'single' as 'single' | 'recurring' | 'installment',
         installment_total: '',
     });
@@ -79,6 +80,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                 tag_id: transaction.tag_id || '',
                 goal_id: transaction.goal_id || '',
                 hide_from_reports: transaction.hide_from_reports,
+                is_paid: transaction.is_paid ?? false,
                 recurrence_type: transaction.recurrence_type,
                 installment_total: transaction.installment_total?.toString() || '',
             });
@@ -93,6 +95,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                 tag_id: '',
                 goal_id: '',
                 hide_from_reports: false,
+                is_paid: false,
                 recurrence_type: 'single',
                 installment_total: '',
             });
@@ -122,6 +125,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                 tag_id: formData.tag_id || null,
                 goal_id: formData.goal_id || null,
                 hide_from_reports: formData.hide_from_reports,
+                is_paid: formData.is_paid,
                 recurrence_type: formData.recurrence_type,
                 installment_total: formData.recurrence_type === 'installment'
                     ? parseInt(formData.installment_total)
@@ -145,9 +149,29 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                     const installmentAmount = amount / installments;
                     const transactions = [];
 
+                    const originalDate = new Date(formData.date);
+                    const originalDay = originalDate.getDate();
+
                     for (let i = 0; i < installments; i++) {
                         const installmentDate = new Date(formData.date);
                         installmentDate.setMonth(installmentDate.getMonth() + i);
+
+                        const lastDayOfMonth = new Date(
+                            installmentDate.getFullYear(),
+                            installmentDate.getMonth() + 1,
+                            0
+                        ).getDate();
+
+                        let targetDay = originalDay;
+                        if (originalDay === 31 && lastDayOfMonth < 31) {
+                            targetDay = Math.min(30, lastDayOfMonth);
+                        } else if (originalDay === 29 && lastDayOfMonth < 29) {
+                            targetDay = lastDayOfMonth;
+                        } else if (originalDay > lastDayOfMonth) {
+                            targetDay = lastDayOfMonth;
+                        }
+
+                        installmentDate.setDate(targetDay);
 
                         transactions.push({
                             ...transactionData,
@@ -160,6 +184,42 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
 
                     const { error } = await supabase.from('transactions').insert(transactions);
                     if (error) throw error;
+                } else if (formData.recurrence_type === 'recurring') {
+                    // Criar template e instâncias materializadas para 24 meses
+                    const { data: template, error: templateError } = await supabase
+                        .from('transactions')
+                        .insert({
+                            ...transactionData,
+                            hide_from_reports: true,
+                        })
+                        .select('id, date')
+                        .single();
+
+                    if (templateError) throw templateError;
+
+                    const baseDate = new Date(formData.date);
+                    const baseDay = baseDate.getDate();
+                    const instances = [];
+                    for (let i = 0; i < 24; i++) {
+                        const target = new Date(baseDate);
+                        target.setMonth(target.getMonth() + i);
+                        const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+                        let targetDay = baseDay;
+                        if (baseDay === 31 && lastDay < 31) targetDay = Math.min(30, lastDay);
+                        else if (baseDay > lastDay) targetDay = lastDay;
+                        target.setDate(targetDay);
+                        instances.push({
+                            ...transactionData,
+                            parent_transaction_id: template.id,
+                            hide_from_reports: false,
+                            date: target.toISOString().split('T')[0],
+                        });
+                    }
+
+                    if (instances.length > 0) {
+                        const { error } = await supabase.from('transactions').insert(instances);
+                        if (error) throw error;
+                    }
                 } else {
                     const { error } = await supabase.from('transactions').insert(transactionData);
                     if (error) throw error;
@@ -321,6 +381,19 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                         />
                         <Label htmlFor="hide" className="cursor-pointer">
                             Ocultar dos relatórios
+                        </Label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="paid"
+                            checked={formData.is_paid}
+                            onChange={(e) => setFormData({ ...formData, is_paid: e.target.checked })}
+                            className="h-4 w-4 rounded border-input"
+                        />
+                        <Label htmlFor="paid" className="cursor-pointer">
+                            Pago
                         </Label>
                     </div>
 

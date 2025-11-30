@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IonPage, IonHeader, IonToolbar, IonContent } from '@ionic/react';
+import { IonPage, IonHeader, IonToolbar, IonContent, useIonViewWillLeave } from '@ionic/react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Transaction, Account, Tag, Goal } from '../types';
@@ -15,7 +15,8 @@ import { Edit2, Trash2, Filter, X, Settings } from 'lucide-react';
 import { useHistory } from 'react-router-dom';
 import { DatePickerWithRange } from '../components/ui/DatePickerWithRange';
 import { type DateRange } from 'react-day-picker';
-import { addDays, format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns';
+import { Checkbox } from '../components/ui/Checkbox';
 
 export const TransactionsPage: React.FC = () => {
     const { user } = useAuth();
@@ -43,6 +44,7 @@ export const TransactionsPage: React.FC = () => {
         accountId: '',
         goalId: '',
         description: '',
+        paidStatus: 'all' as 'all' | 'paid' | 'unpaid',
     });
     const [showFilters, setShowFilters] = useState(false);
 
@@ -82,86 +84,52 @@ export const TransactionsPage: React.FC = () => {
             const startDate = format(dateRange.from, 'yyyy-MM-dd');
             const endDate = format(dateRange.to, 'yyyy-MM-dd');
 
-            // Buscar transações normais (não recorrentes)
+            // Buscar transações normais (não recorrentes) e parcelas
             let query = supabase
                 .from('transactions')
                 .select('*')
                 .eq('user_id', user.id)
                 .gte('date', startDate)
                 .lte('date', endDate)
-                .neq('recurrence_type', 'recurring') // Excluir recorrentes originais
+                .neq('recurrence_type', 'recurring') // Excluir templates recorrentes
+                .is('parent_transaction_id', null)
                 .order('date', { ascending: false });
 
             if (filters.tagId) query = query.eq('tag_id', filters.tagId);
             if (filters.accountId) query = query.eq('account_id', filters.accountId);
             if (filters.goalId) query = query.eq('goal_id', filters.goalId);
             if (filters.description) query = query.ilike('description', `%${filters.description}%`);
+            if (filters.paidStatus === 'paid') query = query.eq('is_paid', true);
+            if (filters.paidStatus === 'unpaid') query = query.eq('is_paid', false);
 
             const { data: transactionsData, error: transactionsError } = await query;
             if (transactionsError) throw transactionsError;
 
-            // Buscar transações recorrentes ativas criadas antes ou durante o período
-            let recurringQuery = supabase
+            // Buscar instâncias recorrentes materializadas
+            let recurringInstancesQuery = supabase
                 .from('transactions')
                 .select('*')
                 .eq('user_id', user.id)
-                .eq('recurrence_type', 'recurring')
-                .lte('date', endDate); // Criadas antes do fim do período
+                .gte('date', startDate)
+                .lte('date', endDate)
+                .not('parent_transaction_id', 'is', null);
 
-            if (filters.tagId) recurringQuery = recurringQuery.eq('tag_id', filters.tagId);
-            if (filters.accountId) recurringQuery = recurringQuery.eq('account_id', filters.accountId);
-            if (filters.goalId) recurringQuery = recurringQuery.eq('goal_id', filters.goalId);
-            if (filters.description) recurringQuery = recurringQuery.ilike('description', `%${filters.description}%`);
+            if (filters.tagId) recurringInstancesQuery = recurringInstancesQuery.eq('tag_id', filters.tagId);
+            if (filters.accountId) recurringInstancesQuery = recurringInstancesQuery.eq('account_id', filters.accountId);
+            if (filters.goalId) recurringInstancesQuery = recurringInstancesQuery.eq('goal_id', filters.goalId);
+            if (filters.description) recurringInstancesQuery = recurringInstancesQuery.ilike('description', `%${filters.description}%`);
+            if (filters.paidStatus === 'paid') recurringInstancesQuery = recurringInstancesQuery.eq('is_paid', true);
+            if (filters.paidStatus === 'unpaid') recurringInstancesQuery = recurringInstancesQuery.eq('is_paid', false);
 
-            const { data: recurringData, error: recurringError } = await recurringQuery;
-            if (recurringError) throw recurringError;
-
-            // Gerar instâncias virtuais de recorrentes
-            const recurringInstances: Transaction[] = [];
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-
-            recurringData?.forEach((t) => {
-                const [tYear, tMonth, tDay] = t.date.split('-').map(Number);
-
-                // Iterar por cada mês dentro do intervalo selecionado
-                let currentMonth = new Date(start.getFullYear(), start.getMonth(), 1);
-                const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
-
-                while (currentMonth <= endMonth) {
-                    // Calcular a data alvo para este mês
-                    const targetDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), tDay);
-
-                    // Ajustar se o dia não existe no mês (ex: 31 em Fev)
-                    const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-                    if (tDay > lastDayOfMonth) {
-                        targetDate.setDate(lastDayOfMonth);
-                    }
-
-                    // Verificar se a data calculada está dentro do intervalo selecionado E é posterior à criação
-                    const creationDate = new Date(tYear, tMonth - 1, tDay);
-
-                    // Ajuste de fuso horário para comparação segura
-                    const targetDateStr = format(targetDate, 'yyyy-MM-dd');
-
-                    if (targetDateStr >= startDate && targetDateStr <= endDate && targetDate >= creationDate) {
-                        recurringInstances.push({
-                            ...t,
-                            id: `${t.id}_${format(targetDate, 'yyyy-MM')}`, // ID virtual único
-                            date: targetDateStr,
-                            original_id: t.id
-                        });
-                    }
-
-                    // Avançar para o próximo mês
-                    currentMonth.setMonth(currentMonth.getMonth() + 1);
-                }
-            });
+            const { data: recurringInstancesData, error: recurringInstancesError } = await recurringInstancesQuery;
+            if (recurringInstancesError) throw recurringInstancesError;
 
             // Combinar e ordenar
-            const allTransactions = [...(transactionsData || []), ...recurringInstances].sort((a, b) =>
-                new Date(b.date).getTime() - new Date(a.date).getTime()
-            );
+            const allTransactions = [...(transactionsData || []), ...(recurringInstancesData || [])]
+                .map((t) => ({ ...t, is_paid: t.is_paid ?? false }))
+                .sort((a, b) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                );
 
             setTransactions(allTransactions);
         } catch (error) {
@@ -171,17 +139,39 @@ export const TransactionsPage: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (transaction: Transaction) => {
         if (!confirm('Tem certeza que deseja excluir esta transação?')) return;
 
-        // Se for uma instância virtual, avisar que não pode deletar diretamente (ou implementar lógica para deletar a original)
-        if (id.includes('_')) {
-            alert('Esta é uma transação recorrente virtual. Para excluí-la, edite a transação original.');
+        const isRecurringInstance = Boolean(transaction.parent_transaction_id);
+
+        if (isRecurringInstance) {
+            const choice = window.prompt(
+                'Excluir recorrente:\n1 - Apenas esta ocorrência\n2 - Toda a série (anteriores e futuras)\n3 - Esta e as futuras',
+                '1'
+            );
+
+            const parentId = transaction.parent_transaction_id!;
+
+            if (choice === '1') {
+                await supabase.from('transactions').delete().eq('id', transaction.id);
+            } else if (choice === '2') {
+                await supabase.from('transactions').delete().or(`id.eq.${parentId},parent_transaction_id.eq.${parentId}`);
+            } else if (choice === '3') {
+                await supabase
+                    .from('transactions')
+                    .delete()
+                    .eq('parent_transaction_id', parentId)
+                    .gte('date', transaction.date);
+            } else {
+                return;
+            }
+            fetchData();
             return;
         }
 
+        // Transação normal ou template
         try {
-            const { error } = await supabase.from('transactions').delete().eq('id', id);
+            const { error } = await supabase.from('transactions').delete().eq('id', transaction.id);
             if (error) throw error;
             fetchData();
         } catch (error) {
@@ -196,6 +186,7 @@ export const TransactionsPage: React.FC = () => {
             accountId: '',
             goalId: '',
             description: '',
+            paidStatus: 'all',
         });
         setDateRange({
             from: startOfMonth(new Date()),
@@ -216,6 +207,116 @@ export const TransactionsPage: React.FC = () => {
         const d = new Date(year, month - 1, day);
         return d.toLocaleDateString('pt-BR');
     };
+
+    const adjustDayForMonth = (baseDay: number, target: Date) => {
+        const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+        if (baseDay === 31 && lastDay < 31) return Math.min(30, lastDay);
+        if (baseDay > lastDay) return lastDay;
+        return baseDay;
+    };
+
+    const ensureRecurringInstances = async (userId: string) => {
+        const { data: recurringTemplates } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('recurrence_type', 'recurring')
+            .is('parent_transaction_id', null);
+
+        if (!recurringTemplates || recurringTemplates.length === 0) return;
+
+        const templateIds = recurringTemplates.map((t) => t.id);
+
+        const targetEnd = addMonths(new Date(), 24);
+
+        const { data: existingInstances } = await supabase
+            .from('transactions')
+            .select('id, parent_transaction_id, date')
+            .in('parent_transaction_id', templateIds)
+            .lte('date', format(targetEnd, 'yyyy-MM-dd'));
+
+        const existingMap = new Map<string, boolean>();
+        existingInstances?.forEach((i) => {
+            const key = `${i.parent_transaction_id}_${i.date}`;
+            existingMap.set(key, true);
+        });
+
+        const inserts: any[] = [];
+
+        recurringTemplates.forEach((template) => {
+            const startDate = new Date(template.date);
+            const baseDay = startDate.getDate();
+            let current = new Date(startDate);
+
+            while (current <= targetEnd) {
+                const adjustedDay = adjustDayForMonth(baseDay, current);
+                const instanceDate = new Date(current.getFullYear(), current.getMonth(), adjustedDay);
+                const dateStr = format(instanceDate, 'yyyy-MM-dd');
+                const key = `${template.id}_${dateStr}`;
+                if (!existingMap.has(key)) {
+                    inserts.push({
+                        ...template,
+                        id: undefined,
+                        parent_transaction_id: template.id,
+                        hide_from_reports: template.hide_from_reports ?? false,
+                        date: dateStr,
+                        created_at: undefined,
+                    });
+                    existingMap.set(key, true);
+                }
+                current = addMonths(current, 1);
+            }
+        });
+
+        if (inserts.length > 0) {
+            await supabase.from('transactions').insert(inserts);
+        }
+    };
+
+    const handleTogglePaid = async (transaction: Transaction) => {
+        const nextStatus = !transaction.is_paid;
+        const isRecurringInstance = Boolean(transaction.parent_transaction_id);
+
+        try {
+            if (isRecurringInstance) {
+                await supabase
+                    .from('transactions')
+                    .update({ is_paid: nextStatus })
+                    .eq('id', transaction.id);
+            } else {
+                await supabase
+                    .from('transactions')
+                    .update({ is_paid: nextStatus })
+                    .eq('id', transaction.id);
+            }
+
+            setTransactions((prev) =>
+                prev.map((t) =>
+                    t.id === transaction.id ? { ...t, is_paid: nextStatus } : t
+                )
+            );
+        } catch (error) {
+            console.error('Erro ao marcar como pago:', error);
+            alert('Não foi possível atualizar o status de pagamento.');
+        }
+    };
+
+    const totals = transactions.reduce(
+        (acc, t) => {
+            const amount = Math.abs(parseFloat(t.amount.toString()));
+            if (t.type === 'expense') {
+                acc.expenses += amount;
+                if (t.is_paid) acc.paidExpenses += amount;
+            } else {
+                acc.income += amount;
+                if (t.is_paid) acc.paidIncome += amount;
+            }
+            if (t.is_paid) acc.paid += amount;
+            else acc.unpaid += amount;
+            return acc;
+        },
+        { expenses: 0, income: 0, paid: 0, unpaid: 0, paidIncome: 0, paidExpenses: 0 }
+    );
 
     return (
         <IonPage>
@@ -320,6 +421,17 @@ export const TransactionsPage: React.FC = () => {
                                             ))}
                                         </Select>
                                     </div>
+                                    <div>
+                                        <Label>Status de pagamento</Label>
+                                        <Select
+                                            value={filters.paidStatus}
+                                            onChange={(e) => setFilters({ ...filters, paidStatus: e.target.value as any })}
+                                        >
+                                            <option value="all">Todos</option>
+                                            <option value="paid">Pago</option>
+                                            <option value="unpaid">Não pago</option>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <div className="mt-4">
                                     <Button variant="outline" size="sm" onClick={clearFilters}>
@@ -333,6 +445,38 @@ export const TransactionsPage: React.FC = () => {
 
                     {/* Tabela de transações */}
                     <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Totais</CardTitle>
+                            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                    <p className="text-xs text-muted-foreground">Despesas</p>
+                                    <p className="text-lg font-semibold text-red-600">
+                                        {formatCurrency(totals.expenses)}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                    <p className="text-xs text-muted-foreground">Receitas</p>
+                                    <p className="text-lg font-semibold text-green-600">
+                                        {formatCurrency(totals.income)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Recebidas: {formatCurrency(totals.paidIncome)}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                    <p className="text-xs text-muted-foreground">Pagos</p>
+                                    <p className="text-lg font-semibold text-blue-600">
+                                        {formatCurrency(totals.paid)}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-border bg-muted/60 p-3">
+                                    <p className="text-xs text-muted-foreground">Não pagos</p>
+                                    <p className="text-lg font-semibold text-orange-600">
+                                        {formatCurrency(totals.unpaid)}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardHeader>
                         <CardContent className="p-0">
                             {loading ? (
                                 <div className="p-6 text-center text-muted-foreground">Carregando...</div>
@@ -350,6 +494,7 @@ export const TransactionsPage: React.FC = () => {
                                                 <th className="p-3 text-left text-sm font-medium">Conta</th>
                                                 <th className="p-3 text-left text-sm font-medium">Tag</th>
                                                 <th className="p-3 text-left text-sm font-medium">Meta</th>
+                                                <th className="p-3 text-center text-sm font-medium">Pago</th>
                                                 <th className="p-3 text-right text-sm font-medium">Valor</th>
                                                 <th className="p-3 text-center text-sm font-medium">Ações</th>
                                             </tr>
@@ -380,6 +525,13 @@ export const TransactionsPage: React.FC = () => {
                                                         <td className="p-3 text-sm">{account?.name || '-'}</td>
                                                         <td className="p-3 text-sm">{tag?.name || '-'}</td>
                                                         <td className="p-3 text-sm">{goal?.name || '-'}</td>
+                                                        <td className="p-3 text-center">
+                                                            <Checkbox
+                                                                checked={transaction.is_paid}
+                                                                onChange={() => handleTogglePaid(transaction)}
+                                                                aria-label="Marcar como pago"
+                                                            />
+                                                        </td>
                                                         <td
                                                             className={`p-3 text-right text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'
                                                                 }`}
@@ -393,22 +545,17 @@ export const TransactionsPage: React.FC = () => {
                                                                     size="icon"
                                                                     variant="ghost"
                                                                     onClick={() => {
-                                                                        if (isVirtual) {
-                                                                            alert('Edite a transação original para alterar recorrências.');
-                                                                        } else {
-                                                                            setEditingTransaction(transaction);
-                                                                            setShowTransactionForm(true);
-                                                                        }
+                                                                        const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
+                                                                        setEditingTransaction({ ...transaction, id: baseId });
+                                                                        setShowTransactionForm(true);
                                                                     }}
-                                                                    disabled={isVirtual}
                                                                 >
                                                                     <Edit2 className="h-4 w-4" />
                                                                 </Button>
                                                                 <Button
                                                                     size="icon"
                                                                     variant="ghost"
-                                                                    onClick={() => handleDelete(transaction.id)}
-                                                                    disabled={isVirtual}
+                                                                    onClick={() => handleDelete(transaction)}
                                                                 >
                                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                                 </Button>

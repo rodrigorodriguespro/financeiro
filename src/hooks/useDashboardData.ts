@@ -38,6 +38,22 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
 
                 if (transactionsError) throw transactionsError;
 
+                const normalizedTransactions = (transactionsData || []).map((t) => ({
+                    ...t,
+                    is_paid: t.is_paid ?? false,
+                }));
+
+                // Instâncias materializadas de recorrentes
+                const { data: recurringInstances, error: recurringInstancesError } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .not('parent_transaction_id', 'is', null)
+                    .gte('date', startDate)
+                    .lte('date', endDate);
+
+                if (recurringInstancesError) throw recurringInstancesError;
+
                 // Buscar transações recorrentes ativas criadas antes ou durante o mês selecionado
                 const { data: recurringData, error: recurringError } = await supabase
                     .from('transactions')
@@ -50,7 +66,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                 if (recurringError) throw recurringError;
 
                 // Processar recorrentes: gerar instância para o mês selecionado
-                const recurringInstances = (recurringData || []).map(t => {
+                const recurringInstancesGenerated = (recurringData || []).map(t => {
                     // Parse manual da data para evitar problemas de timezone
                     const [_, __, day] = t.date.split('-').map(Number);
 
@@ -65,6 +81,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
 
                     return {
                         ...t,
+                        is_paid: t.is_paid ?? false,
                         id: `${t.id}_${selectedMonth}`, // ID virtual único
                         date: targetDate.toISOString().split('T')[0],
                         original_id: t.id
@@ -72,7 +89,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                 });
 
                 // Combinar transações normais com instâncias recorrentes
-                const allTransactions = [...(transactionsData || []), ...recurringInstances].sort((a, b) =>
+                const allTransactions = [...normalizedTransactions, ...(recurringInstances || []), ...recurringInstancesGenerated.filter(Boolean)].sort((a, b) =>
                     new Date(b.date).getTime() - new Date(a.date).getTime()
                 );
 

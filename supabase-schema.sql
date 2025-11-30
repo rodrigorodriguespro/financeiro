@@ -108,6 +108,7 @@ CREATE TABLE transactions (
   tag_id UUID REFERENCES tags ON DELETE SET NULL,
   goal_id UUID REFERENCES goals ON DELETE SET NULL,
   hide_from_reports BOOLEAN DEFAULT FALSE,
+  is_paid BOOLEAN NOT NULL DEFAULT FALSE,
   recurrence_type TEXT NOT NULL DEFAULT 'single' CHECK (recurrence_type IN ('single', 'recurring', 'installment')),
   installment_total INTEGER,
   installment_current INTEGER,
@@ -133,6 +134,7 @@ CREATE POLICY "Users can delete own transactions" ON transactions
 CREATE INDEX idx_transactions_user_date ON transactions(user_id, date);
 CREATE INDEX idx_transactions_type ON transactions(type);
 CREATE INDEX idx_transactions_goal ON transactions(goal_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_parent_date ON transactions(parent_transaction_id, date);
 CREATE INDEX idx_accounts_user ON accounts(user_id);
 CREATE INDEX idx_tags_user ON tags(user_id);
 

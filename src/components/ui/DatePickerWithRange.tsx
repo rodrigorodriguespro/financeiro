@@ -4,6 +4,8 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { type DateRange } from "react-day-picker"
+import { useLocation } from "react-router-dom"
+import { useIonViewWillLeave } from "@ionic/react"
 
 import { cn } from "../../lib/utils"
 import { Button } from "./Button"
@@ -26,6 +28,18 @@ export function DatePickerWithRange({
     setDate,
 }: DatePickerWithRangeProps) {
     const [isOpen, setIsOpen] = React.useState(false);
+    const location = useLocation();
+    const [hasStartedRange, setHasStartedRange] = React.useState(false);
+
+    useIonViewWillLeave(() => setIsOpen(false));
+
+    React.useEffect(() => {
+        setIsOpen(false);
+    }, [location.pathname]);
+
+    React.useEffect(() => {
+        if (!isOpen) setHasStartedRange(false);
+    }, [isOpen]);
 
     return (
         <div className={cn("grid gap-2", className)}>
@@ -54,23 +68,31 @@ export function DatePickerWithRange({
                         )}
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={date}
-                        onSelect={(newDate: DateRange | undefined) => {
-                            setDate(newDate);
-                            // Fechar o popover se ambas as datas (início e fim) estiverem selecionadas
-                            if (newDate?.from && newDate?.to) {
-                                setIsOpen(false);
-                            }
-                        }}
-                        numberOfMonths={2}
-                        locale={ptBR}
-                    />
-                </PopoverContent>
+                {isOpen && (
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={date?.from}
+                            selected={date}
+                            onSelect={(newDate: DateRange | undefined) => {
+                                setDate(newDate);
+
+                                if (newDate?.from && (!newDate?.to || newDate.from.getTime() === newDate.to.getTime())) {
+                                    setHasStartedRange(true);
+                                    return;
+                                }
+
+                                if (newDate?.from && newDate?.to && hasStartedRange) {
+                                    setIsOpen(false);
+                                    setHasStartedRange(false);
+                                }
+                            }}
+                            numberOfMonths={2}
+                            locale={ptBR}
+                        />
+                    </PopoverContent>
+                )}
             </Popover>
         </div>
     )

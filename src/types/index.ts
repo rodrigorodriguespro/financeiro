@@ -29,10 +29,12 @@ export interface Transaction {
     tag_id?: string;
     goal_id?: string;
     hide_from_reports: boolean;
+    is_paid: boolean;
     recurrence_type: 'single' | 'recurring' | 'installment';
     installment_total?: number;
     installment_current?: number;
     parent_transaction_id?: string;
+    original_id?: string;
     created_at: string;
 }
 
