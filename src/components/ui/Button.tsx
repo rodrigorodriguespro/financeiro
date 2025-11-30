@@ -7,9 +7,9 @@ const buttonVariants = cva(
     {
         variants: {
             variant: {
-                default: 'border-border bg-card text-card-foreground shadow-sm hover:shadow-md dark:bg-[#1c1c1f] dark:text-slate-50 dark:border-[#2f2f32]',
+                default: 'border-slate-200 bg-white text-slate-900 shadow-[0_1px_0_rgba(255,255,255,0.8),0_1.5px_3px_rgba(0,0,0,0.12)] hover:shadow-[0_3px_10px_rgba(0,0,0,0.14)] active:bg-[#f2f2f4] dark:border-[#2c2c2e] dark:bg-[#1c1c1f] dark:text-slate-50 dark:shadow-[0_1px_0_rgba(255,255,255,0.05),0_1.5px_3px_rgba(0,0,0,0.55)] dark:hover:shadow-[0_3px_10px_rgba(0,0,0,0.65)]',
                 destructive: 'border-[#d43f3f] bg-gradient-to-b from-[#ff8b8b] to-[#e85656] text-white shadow-[0_1px_0_rgba(255,255,255,0.6),0_1.5px_3px_rgba(232,86,86,0.35)] hover:shadow-[0_4px_12px_rgba(232,86,86,0.4)] dark:border-[#7a1f1f] dark:bg-gradient-to-b dark:from-[#9b2323] dark:to-[#6a1717] dark:text-white dark:shadow-[0_1px_0_rgba(255,255,255,0.06),0_1.5px_4px_rgba(0,0,0,0.65)]',
-                outline: 'border-border bg-background text-foreground shadow-sm hover:bg-muted dark:bg-[#141416] dark:text-slate-50 dark:border-[#2f2f32]',
+                outline: 'border-slate-200 bg-white text-slate-900 shadow-[0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.08)] hover:bg-[#f5f5f8] dark:border-[#2c2c2e] dark:bg-[#1a1a1d] dark:text-slate-50 dark:shadow-[0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.55)] dark:hover:bg-[#202025]',
                 ghost: 'border-transparent bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-[#1c1c20]',
                 link: 'text-primary underline-offset-4 hover:underline',
             },

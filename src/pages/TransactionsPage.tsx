@@ -11,7 +11,7 @@ import { Label } from '../components/ui/Label';
 import { TransactionFormDialog } from '../components/TransactionFormDialog';
 import { ManageAccountsDialog } from '../components/ManageAccountsDialog';
 import { ManageTagsDialog } from '../components/ManageTagsDialog';
-import { Edit2, Trash2, Filter, X, Settings } from 'lucide-react';
+import { Edit2, Trash2, Filter, X, Settings, Plus } from 'lucide-react';
 import { useHistory } from 'react-router-dom';
 import { DatePickerWithRange } from '../components/ui/DatePickerWithRange';
 import { type DateRange } from 'react-day-picker';
@@ -272,8 +272,9 @@ export const TransactionsPage: React.FC = () => {
                 <div className="space-y-4 bg-background p-4 rounded-xl border border-border shadow-sm">
                     {/* Botões de ação */}
                     <div className="flex flex-wrap gap-2">
-                        <Button onClick={() => setShowTransactionForm(true)}>
-                            Nova Transação
+                        <Button className='p-3' onClick={() => setShowTransactionForm(true)}>
+                            <Plus className="mr-1 ml-4 h-4 w-4" />
+                            <p className="mr-4" >Adicionar</p>
                         </Button>
                         <Button variant="outline" onClick={() => setShowManageAccounts(true)}>
                             <Settings className="mr-2 h-4 w-4" />
