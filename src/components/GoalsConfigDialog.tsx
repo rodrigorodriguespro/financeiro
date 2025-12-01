@@ -41,12 +41,12 @@ export const GoalsConfigDialog: React.FC<GoalsConfigDialogProps> = ({
     const handlePercentageChange = (goalId: string, value: number) => {
         setPercentages((prev) => ({
             ...prev,
-            [goalId]: Math.max(0, Math.min(100, value)),
+            [goalId]: Math.max(0, Math.min(100, Math.round(value))),
         }));
     };
 
-    const totalPercentage = Object.values(percentages).reduce((sum, val) => sum + val, 0);
-    const isValid = Math.abs(totalPercentage - 100) < 0.01; // Tolerância para erros de ponto flutuante
+    const totalPercentage = Math.round(Object.values(percentages).reduce((sum, val) => sum + val, 0));
+    const isValid = totalPercentage === 100;
 
     const handleSave = async () => {
         if (!isValid) {
@@ -102,15 +102,12 @@ export const GoalsConfigDialog: React.FC<GoalsConfigDialogProps> = ({
                             exatamente 100%.
                         </p>
                         <div className="mt-2">
-                            <span
-                                className={`text-lg font-semibold ${isValid ? 'text-green-600' : 'text-red-600'
-                                    }`}
-                            >
-                                Total: {totalPercentage.toFixed(1)}%
+                            <span className={`text-lg font-semibold ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+                                Total: {totalPercentage}%
                             </span>
                             {!isValid && (
                                 <span className="ml-2 text-sm text-red-600">
-                                    (Faltam {(100 - totalPercentage).toFixed(1)}%)
+                                    (Faltam {100 - totalPercentage}%)
                                 </span>
                             )}
                         </div>
@@ -124,14 +121,14 @@ export const GoalsConfigDialog: React.FC<GoalsConfigDialogProps> = ({
                                     <div className="flex items-center justify-between">
                                         <Label>{goal.name}</Label>
                                         <span className="text-sm font-semibold">
-                                            {percentages[goal.id]?.toFixed(1) || 0}%
+                                            {Math.round(percentages[goal.id] || 0)}%
                                         </span>
                                     </div>
                                     <input
                                         type="range"
                                         min="0"
                                         max="100"
-                                        step="0.1"
+                                        step="1"
                                         value={percentages[goal.id] || 0}
                                         onChange={(e) => handlePercentageChange(goal.id, parseFloat(e.target.value))}
                                         className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-secondary"
@@ -173,7 +170,7 @@ export const GoalsConfigDialog: React.FC<GoalsConfigDialogProps> = ({
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
-                                        label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
+                                        label={({ name, value }) => `${name}: ${Math.round(value)}%`}
                                         outerRadius={100}
                                         fill="#8884d8"
                                         dataKey="value"
@@ -185,11 +182,8 @@ export const GoalsConfigDialog: React.FC<GoalsConfigDialogProps> = ({
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="mt-4 text-center">
-                                <div
-                                    className={`text-3xl font-bold ${isValid ? 'text-green-600' : 'text-red-600'
-                                        }`}
-                                >
-                                    {totalPercentage.toFixed(1)}%
+                                <div className={`text-3xl font-bold ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+                                    {totalPercentage}%
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                     {isValid ? 'Configuração válida!' : 'Ajuste para 100%'}

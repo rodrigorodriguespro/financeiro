@@ -205,6 +205,23 @@ ion-button .button-native {
   background: inherit !important;
   color: inherit !important;
 }
+
+/* Entradas genéricas (inputs/selects) para garantir contraste em light */
+input,
+select,
+textarea {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e5e7eb !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background: #121214 !important;
+  color: #f8fafc !important;
+  border-color: #2f2f32 !important;
+}
 }
 
 @theme {

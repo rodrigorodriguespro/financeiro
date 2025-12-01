@@ -2,7 +2,6 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { supabase } from '../lib/supabase';
-import type { Transaction } from '../types';
 
 const DAILY_REMINDER_ID = 1001;
 const BANK_SUGGESTION_ID_BASE = 2000;

@@ -268,7 +268,10 @@ export const TransactionsPage: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
 
-            <IonContent className="ion-padding !bg-background">
+            <IonContent
+                className="ion-padding !bg-background"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}
+            >
                 <div className="space-y-4 bg-background p-4 rounded-xl border border-border shadow-sm">
                     {/* Botões de ação */}
                     <div className="flex flex-wrap gap-2">
@@ -423,88 +426,157 @@ export const TransactionsPage: React.FC = () => {
                                     Nenhuma transação encontrada
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full border-separate border-spacing-0 ml-8">
-                                        <thead className="bg-muted/60">
-                                            <tr className='p-4'>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Data</th>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Descrição</th>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Conta</th>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Tag</th>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Meta</th>
-                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
-                                                <th className="p-3 text-right text-sm font-semibold text-muted-foreground">Valor</th>
-                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Ações</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {transactions.map((transaction) => {
-                                                const account = accounts.find((a) => a.id === transaction.account_id);
-                                                const tag = tags.find((t) => t.id === transaction.tag_id);
-                                                const goal = goals.find((g) => g.id === transaction.goal_id);
-                                                const isExpense = transaction.type === 'expense';
-                                                const isVirtual = transaction.id.includes('_');
+                                <>
+                                    {/* Lista mobile */}
+                                    <div className="flex flex-col gap-3 md:hidden">
+                                        {transactions.map((transaction) => {
+                                            const account = accounts.find((a) => a.id === transaction.account_id);
+                                            const tag = tags.find((t) => t.id === transaction.tag_id);
+                                            const goal = goals.find((g) => g.id === transaction.goal_id);
+                                            const isExpense = transaction.type === 'expense';
+                                            const isVirtual = transaction.id.includes('_');
 
-                                                return (
-                                                    <tr
-                                                        key={transaction.id}
-                                                        className="transition hover:bg-muted/40 p-8"
-                                                    >
-                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{formatDate(transaction.date)}</td>
-                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">
-                                                            {transaction.description}
-                                                            {transaction.hide_from_reports && (
-                                                                <span className="ml-2 text-xs text-muted-foreground">(Oculto)</span>
-                                                            )}
-                                                            {isVirtual && (
-                                                                <span className="ml-2 text-xs text-blue-500">(Recorrente)</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{account?.name || '-'}</td>
-                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{tag?.name || '-'}</td>
-                                                        <td className="p-3 text-sm text-foreground border-b border-border/60">{goal?.name || '-'}</td>
-                                                        <td className="p-3 text-center border-b border-border/60">
+                                            return (
+                                                <div
+                                                    key={transaction.id}
+                                                    className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm text-muted-foreground">{formatDate(transaction.date)}</span>
+                                                        <span className={`text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                                                            {isExpense && '-'}
+                                                            {formatCurrency(parseFloat(transaction.amount.toString()))}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-1 text-sm font-medium text-foreground">{transaction.description}</div>
+                                                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                                        <span>Conta: {account?.name || '-'}</span>
+                                                        <span>Tag: {tag?.name || '-'}</span>
+                                                        <span>Meta: {goal?.name || '-'}</span>
+                                                        <span className="flex items-center gap-2">
+                                                            Pago:
                                                             <Checkbox
                                                                 checked={transaction.is_paid}
                                                                 onChange={() => handleTogglePaid(transaction)}
                                                                 aria-label="Marcar como pago"
                                                             />
-                                                        </td>
-                                                        <td
-                                                            className={`p-3 text-right text-sm font-semibold border-b border-border/60 ${isExpense ? 'text-red-600' : 'text-green-600'
-                                                                }`}
+                                                        </span>
+                                                    </div>
+                                                    {isVirtual && (
+                                                        <div className="mt-1 text-[11px] text-blue-500">Recorrente</div>
+                                                    )}
+                                                    {transaction.hide_from_reports && (
+                                                        <div className="text-[11px] text-muted-foreground">Oculto dos relatórios</div>
+                                                    )}
+                                                    <div className="mt-3 flex justify-end gap-2">
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
+                                                                setEditingTransaction({ ...transaction, id: baseId });
+                                                                setShowTransactionForm(true);
+                                                            }}
                                                         >
-                                                            {isExpense && '-'}
-                                                            {formatCurrency(parseFloat(transaction.amount.toString()))}
-                                                        </td>
-                                                        <td className="p-3 border-b border-border/60">
-                                                            <div className="flex justify-center gap-2">
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    onClick={() => {
-                                                                        const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
-                                                                        setEditingTransaction({ ...transaction, id: baseId });
-                                                                        setShowTransactionForm(true);
-                                                                    }}
-                                                                >
-                                                                    <Edit2 className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    onClick={() => handleDelete(transaction)}
-                                                                >
-                                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                                </Button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            onClick={() => handleDelete(transaction)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Tabela desktop/tablet */}
+                                    <div className="hidden overflow-x-auto md:block">
+                                        <table className="w-full border-separate border-spacing-0 ml-4">
+                                            <thead className="bg-muted/60">
+                                                <tr className='p-4'>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Data</th>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Descrição</th>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Conta</th>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Tag</th>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Meta</th>
+                                                    <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
+                                                    <th className="p-3 text-right text-sm font-semibold text-muted-foreground">Valor</th>
+                                                    <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Ações</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {transactions.map((transaction) => {
+                                                    const account = accounts.find((a) => a.id === transaction.account_id);
+                                                    const tag = tags.find((t) => t.id === transaction.tag_id);
+                                                    const goal = goals.find((g) => g.id === transaction.goal_id);
+                                                    const isExpense = transaction.type === 'expense';
+                                                    const isVirtual = transaction.id.includes('_');
+
+                                                    return (
+                                                        <tr
+                                                            key={transaction.id}
+                                                            className="transition hover:bg-muted/40"
+                                                        >
+                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{formatDate(transaction.date)}</td>
+                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">
+                                                                {transaction.description}
+                                                                {transaction.hide_from_reports && (
+                                                                    <span className="ml-2 text-xs text-muted-foreground">(Oculto)</span>
+                                                                )}
+                                                                {isVirtual && (
+                                                                    <span className="ml-2 text-xs text-blue-500">(Recorrente)</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{account?.name || '-'}</td>
+                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{tag?.name || '-'}</td>
+                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{goal?.name || '-'}</td>
+                                                            <td className="p-3 text-center border-b border-border/60">
+                                                                <Checkbox
+                                                                    checked={transaction.is_paid}
+                                                                    onChange={() => handleTogglePaid(transaction)}
+                                                                    aria-label="Marcar como pago"
+                                                                />
+                                                            </td>
+                                                            <td
+                                                                className={`p-3 text-right text-sm font-semibold border-b border-border/60 ${isExpense ? 'text-red-600' : 'text-green-600'
+                                                                    }`}
+                                                            >
+                                                                {isExpense && '-'}
+                                                                {formatCurrency(parseFloat(transaction.amount.toString()))}
+                                                            </td>
+                                                            <td className="p-3 border-b border-border/60">
+                                                                <div className="flex justify-center gap-2">
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        onClick={() => {
+                                                                            const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
+                                                                            setEditingTransaction({ ...transaction, id: baseId });
+                                                                            setShowTransactionForm(true);
+                                                                        }}
+                                                                    >
+                                                                        <Edit2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        onClick={() => handleDelete(transaction)}
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                                    </Button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
                             )}
                         </CardContent>
                     </Card>
