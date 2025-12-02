@@ -117,6 +117,18 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                 throw new Error('Valor inválido.');
             }
 
+            const generateId = () => {
+                if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+                    return crypto.randomUUID();
+                }
+                // Fallback para UUID v4-like
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                    const r = (Math.random() * 16) | 0;
+                    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                    return v.toString(16);
+                });
+            };
+
             const transactionData = {
                 user_id: userId,
                 description: formData.description,
@@ -150,9 +162,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                     const installments = parseInt(formData.installment_total);
                     const installmentAmount = amount / installments;
                     const transactions = [];
-                    const seriesId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-                        ? crypto.randomUUID()
-                        : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+                    const seriesId = generateId();
 
                     const originalDate = new Date(formData.date);
                     const originalDay = originalDate.getDate();
@@ -178,13 +188,14 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
 
                         installmentDate.setDate(targetDay);
 
+                        const isFirst = i === 0;
                         transactions.push({
                             ...transactionData,
-                            id: i === 0 ? seriesId : undefined,
+                            id: isFirst ? seriesId : generateId(),
                             amount: installmentAmount,
                             date: installmentDate.toISOString().split('T')[0],
                             installment_current: i + 1,
-                            parent_transaction_id: seriesId,
+                            parent_transaction_id: isFirst ? null : seriesId,
                             description: `${formData.description} (${i + 1}/${installments})`,
                         });
                     }
@@ -192,17 +203,8 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                     const { error } = await supabase.from('transactions').insert(transactions);
                     if (error) throw error;
                 } else if (formData.recurrence_type === 'recurring') {
-                    // Criar template e instâncias materializadas para 24 meses
-                    const { data: template, error: templateError } = await supabase
-                        .from('transactions')
-                        .insert({
-                            ...transactionData,
-                            hide_from_reports: true,
-                        })
-                        .select('id, date')
-                        .single();
-
-                    if (templateError) throw templateError;
+                    // Criar instâncias materializadas para 24 meses usando a primeira como "mãe" visível
+                    const seriesId = generateId();
 
                     const baseDate = new Date(formData.date);
                     const baseDay = baseDate.getDate();
@@ -215,9 +217,11 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                         if (baseDay === 31 && lastDay < 31) targetDay = Math.min(30, lastDay);
                         else if (baseDay > lastDay) targetDay = lastDay;
                         target.setDate(targetDay);
+                        const isFirst = i === 0;
                         instances.push({
                             ...transactionData,
-                            parent_transaction_id: template.id,
+                            id: isFirst ? seriesId : generateId(),
+                            parent_transaction_id: seriesId,
                             hide_from_reports: false,
                             date: target.toISOString().split('T')[0],
                         });

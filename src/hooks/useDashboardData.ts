@@ -53,6 +53,15 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                     .lte('date', endDate);
 
                 if (recurringInstancesError) throw recurringInstancesError;
+                const existingKeys = new Set<string>();
+                normalizedTransactions.forEach((t) => {
+                    const key = `${t.parent_transaction_id || t.id}_${t.date}`;
+                    existingKeys.add(key);
+                });
+                (recurringInstances || []).forEach((ri) => {
+                    const key = `${ri.parent_transaction_id || ri.id}_${ri.date}`;
+                    existingKeys.add(key);
+                });
 
                 // Buscar transações recorrentes ativas criadas antes ou durante o mês selecionado
                 const { data: recurringData, error: recurringError } = await supabase
@@ -79,16 +88,22 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                         targetDate.setDate(lastDayOfMonth);
                     }
 
+                    const targetDateStr = targetDate.toISOString().split('T')[0];
+                    const key = `${t.id}_${targetDateStr}`;
+                    if (existingKeys.has(key)) {
+                        return null;
+                    }
+                    existingKeys.add(key);
                     return {
                         ...t,
                         is_paid: t.is_paid ?? false,
                         id: `${t.id}_${selectedMonth}`, // ID virtual único
-                        date: targetDate.toISOString().split('T')[0],
+                        date: targetDateStr,
                         original_id: t.id
                     };
                 });
 
-                // Combinar transações normais com instâncias recorrentes
+                // Combinar transações normais com instâncias recorrentes (já deduplicadas)
                 const allTransactions = [...normalizedTransactions, ...(recurringInstances || []), ...recurringInstancesGenerated.filter(Boolean)].sort((a, b) =>
                     new Date(b.date).getTime() - new Date(a.date).getTime()
                 );
