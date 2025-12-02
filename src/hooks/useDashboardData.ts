@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Transaction, Account, Tag, Goal, GoalConfig } from '../types';
 
-export const useDashboardData = (selectedMonth: string, userId: string | undefined) => {
+export const useDashboardData = (selectedMonth: string, userId: string | undefined, refreshTrigger = 0) => {
     const [loading, setLoading] = useState(true);
     const [income, setIncome] = useState(0);
     const [expenses, setExpenses] = useState(0);
@@ -97,7 +97,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
 
                 // Calcular receitas e despesas do mês usando todas as transações
                 const totalIncome = allTransactions
-                    .filter((t) => t.type === 'income')
+                    .filter((t) => t.type === 'income' && t.is_paid)
                     .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 
                 const totalExpenses = allTransactions
@@ -116,7 +116,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                 // Buscar transações normais (não recorrentes) no período
                 const { data: historyTransactions, error: historyError } = await supabase
                     .from('transactions')
-                    .select('date, amount, type, recurrence_type')
+                    .select('date, amount, type, recurrence_type, is_paid')
                     .eq('user_id', userId)
                     .gte('date', historyStartDate.toISOString().split('T')[0])
                     .lte('date', historyEndDate.toISOString().split('T')[0])
@@ -128,7 +128,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                 // Buscar TODAS as transações recorrentes ativas
                 const { data: historyRecurring, error: historyRecurringError } = await supabase
                     .from('transactions')
-                    .select('date, amount, type, recurrence_type')
+                    .select('date, amount, type, recurrence_type, is_paid')
                     .eq('user_id', userId)
                     .eq('recurrence_type', 'recurring')
                     .lte('date', historyEndDate.toISOString().split('T')[0])
@@ -155,7 +155,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                     if (historyMap.has(key)) {
                         const current = historyMap.get(key)!;
                         const amount = parseFloat(t.amount.toString());
-                        if (t.type === 'income') {
+                        if (t.type === 'income' && t.is_paid) {
                             current.income += amount;
                         } else {
                             current.expenses += amount;
@@ -173,7 +173,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                         if (monthKey >= creationKey) {
                             if (historyMap.has(monthKey)) {
                                 const current = historyMap.get(monthKey)!;
-                                if (t.type === 'income') {
+                                if (t.type === 'income' && (t.is_paid ?? false)) {
                                     current.income += amount;
                                 } else {
                                     current.expenses += amount;
@@ -236,7 +236,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
         };
 
         fetchData();
-    }, [selectedMonth, userId]);
+    }, [selectedMonth, userId, refreshTrigger]);
 
     return {
         loading,

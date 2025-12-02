@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IonPage, IonHeader, IonToolbar, IonContent } from '@ionic/react';
+import { IonPage, IonHeader, IonToolbar, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Transaction, Account, Tag, Goal } from '../types';
@@ -18,11 +18,13 @@ import { type DateRange } from 'react-day-picker';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTotalsVisibility } from '../hooks/useTotalsVisibility';
 
 export const TransactionsPage: React.FC = () => {
     const { user } = useAuth();
     const history = useHistory();
     const { isDark, toggleTheme } = useTheme();
+    const { showTotals, toggleVisibility } = useTotalsVisibility();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [tags, setTags] = useState<Tag[]>([]);
@@ -50,7 +52,6 @@ export const TransactionsPage: React.FC = () => {
         type: 'all' as 'all' | 'income' | 'expense',
     });
     const [showFilters, setShowFilters] = useState(false);
-    const [showTotals, setShowTotals] = useState(true);
 
     useEffect(() => {
         if (user && dateRange?.from && dateRange?.to) {
@@ -58,16 +59,6 @@ export const TransactionsPage: React.FC = () => {
         }
     }, [user, dateRange, filters]);
 
-    useEffect(() => {
-        const saved = localStorage.getItem('transactions_show_totals');
-        if (saved !== null) {
-            setShowTotals(saved === 'true');
-        }
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem('transactions_show_totals', showTotals ? 'true' : 'false');
-    }, [showTotals]);
 
     const fetchData = async () => {
         if (!user || !dateRange?.from || !dateRange?.to) return;
@@ -295,7 +286,7 @@ export const TransactionsPage: React.FC = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setShowTotals((prev) => !prev)}
+                                onClick={toggleVisibility}
                                 aria-label={showTotals ? 'Ocultar totais' : 'Mostrar totais'}
                             >
                                 {showTotals ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -309,6 +300,9 @@ export const TransactionsPage: React.FC = () => {
                 className="ion-padding !bg-background"
                 style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}
             >
+                <IonRefresher slot="fixed" onIonRefresh={async (event) => { await fetchData(); event.detail.complete(); }}>
+                    <IonRefresherContent />
+                </IonRefresher>
                 <div className="space-y-4 bg-background p-4 rounded-xl border border-border shadow-sm">
                     {/* Botões de ação */}
                     <div className="flex flex-wrap gap-2">

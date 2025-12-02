@@ -11,9 +11,10 @@ interface RecentTransactionsProps {
         goalName?: string;
         date: string;
     }>;
+    showTotals?: boolean;
 }
 
-export const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions }) => {
+export const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions, showTotals = true }) => {
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
@@ -60,8 +61,14 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transact
                                     className={`text-sm font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                                         }`}
                                 >
-                                    {transaction.type === 'expense' && '-'}
-                                    {formatCurrency(transaction.amount)}
+                                    {showTotals ? (
+                                        <>
+                                            {transaction.type === 'expense' && '-'}
+                                            {formatCurrency(transaction.amount)}
+                                        </>
+                                    ) : (
+                                        '••••'
+                                    )}
                                 </div>
                             </div>
                         ))

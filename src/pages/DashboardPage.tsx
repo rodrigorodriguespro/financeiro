@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonHeader, IonToolbar, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SummaryCards } from '../components/SummaryCards';
@@ -11,16 +11,16 @@ import { GoalsConfigDialog } from '../components/GoalsConfigDialog';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { Button } from '../components/ui/Button';
 import { Plus } from 'lucide-react';
-import { IonHeader, IonToolbar } from '@ionic/react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { useTotalsVisibility } from '../hooks/useTotalsVisibility';
 
 export const DashboardPage: React.FC = () => {
     const { user } = useAuth();
     const history = useHistory();
     const [showGoalsConfig, setShowGoalsConfig] = useState(false);
-    const [showTotals, setShowTotals] = useState(true);
     const { isDark, toggleTheme } = useTheme();
+    const { showTotals, toggleVisibility } = useTotalsVisibility();
     const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
 
     // Mês atual por padrão
@@ -31,9 +31,12 @@ export const DashboardPage: React.FC = () => {
 
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
+    const [refreshTick, setRefreshTick] = useState(0);
+
     const { loading, income, expenses, transactions, tags, goals, goalsConfig, historyData } = useDashboardData(
         selectedMonth,
-        user?.id
+        user?.id,
+        refreshTick
     );
 
     // Preparar dados para gráfico de despesas por tag
@@ -90,17 +93,6 @@ export const DashboardPage: React.FC = () => {
     const handleAddTransaction = () => {
         history.push('/transactions');
     };
-
-    React.useEffect(() => {
-        const saved = localStorage.getItem('dashboard_show_totals');
-        if (saved !== null) {
-            setShowTotals(saved === 'true');
-        }
-    }, []);
-
-    React.useEffect(() => {
-        localStorage.setItem('dashboard_show_totals', showTotals ? 'true' : 'false');
-    }, [showTotals]);
 
     React.useEffect(() => {
         const now = new Date();
@@ -164,7 +156,7 @@ export const DashboardPage: React.FC = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setShowTotals((prev) => !prev)}
+                                onClick={toggleVisibility}
                                 aria-label={showTotals ? 'Ocultar totais' : 'Mostrar totais'}
                             >
                                 {showTotals ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -174,6 +166,9 @@ export const DashboardPage: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
             <IonContent className="ion-padding">
+                <IonRefresher slot="fixed" onIonRefresh={(event) => { setRefreshTick((prev) => prev + 1); event.detail.complete(); }}>
+                    <IonRefresherContent />
+                </IonRefresher>
                 <div className="space-y-6 bg-background p-4">
                     {/* Cards de Resumo */}
                     <SummaryCards income={income} expenses={expenses} showTotals={showTotals} />
@@ -190,7 +185,7 @@ export const DashboardPage: React.FC = () => {
                             goals={goalsProgress}
                             onConfigClick={() => setShowGoalsConfig(true)}
                         />
-                        <RecentTransactions transactions={recentTransactions} />
+                        <RecentTransactions transactions={recentTransactions} showTotals={showTotals} />
                     </div>
                 </div>
             </IonContent>
