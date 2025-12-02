@@ -6,6 +6,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.getcapacitor.Plugin
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.JSObject
 
 @CapacitorPlugin(name = "BankNotificationListener")
 class BankNotificationListenerPlugin : Plugin() {
@@ -24,13 +25,12 @@ class BankNotificationListenerPlugin : Plugin() {
     }
 
     fun emitNotification(pkg: String, title: String?, text: String?, amount: Double?, merchant: String?) {
-        val data = mapOf(
-            "package" to pkg,
-            "title" to (title ?: ""),
-            "text" to (text ?: ""),
-            "amount" to amount,
-            "merchant" to merchant,
-        )
+        val data = JSObject()
+        data.put("package", pkg)
+        data.put("title", title ?: "")
+        data.put("text", text ?: "")
+        data.put("amount", amount)
+        data.put("merchant", merchant)
         notifyListeners("bankNotification", data)
     }
 }
