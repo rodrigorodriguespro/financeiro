@@ -151,29 +151,39 @@ export const TransactionsPage: React.FC = () => {
         if (!confirm('Tem certeza que deseja excluir esta transação?')) return;
 
         const isRecurringInstance = Boolean(transaction.parent_transaction_id);
+        const isInstallment = transaction.recurrence_type === 'installment' || Boolean(transaction.parent_transaction_id);
+        const parentId = transaction.parent_transaction_id || transaction.id;
 
-        if (isRecurringInstance) {
+        if (isRecurringInstance || isInstallment) {
             const choice = window.prompt(
-                'Excluir recorrente:\n1 - Apenas esta ocorrência\n2 - Toda a série (anteriores e futuras)\n3 - Esta e as futuras',
+                isInstallment
+                    ? 'Excluir parcelada:\n1 - Apenas esta parcela\n2 - Toda a série'
+                    : 'Excluir recorrente:\n1 - Apenas esta ocorrência\n2 - Toda a série (anteriores e futuras)\n3 - Esta e as futuras',
                 '1'
             );
 
-            const parentId = transaction.parent_transaction_id!;
-
-            if (choice === '1') {
-                await supabase.from('transactions').delete().eq('id', transaction.id);
-            } else if (choice === '2') {
-                await supabase.from('transactions').delete().or(`id.eq.${parentId},parent_transaction_id.eq.${parentId}`);
-            } else if (choice === '3') {
-                await supabase
-                    .from('transactions')
-                    .delete()
-                    .eq('parent_transaction_id', parentId)
-                    .gte('date', transaction.date);
-            } else {
-                return;
+            try {
+                if (choice === '1') {
+                    await supabase.from('transactions').delete().eq('id', transaction.id);
+                } else if (choice === '2') {
+                    await supabase
+                        .from('transactions')
+                        .delete()
+                        .or(`id.eq.${parentId},parent_transaction_id.eq.${parentId}`);
+                } else if (!isInstallment && choice === '3') {
+                    await supabase
+                        .from('transactions')
+                        .delete()
+                        .eq('parent_transaction_id', parentId)
+                        .gte('date', transaction.date);
+                } else {
+                    return;
+                }
+                fetchData();
+            } catch (error) {
+                console.error('Erro ao excluir série:', error);
+                alert('Erro ao excluir esta série');
             }
-            fetchData();
             return;
         }
 
@@ -476,7 +486,7 @@ export const TransactionsPage: React.FC = () => {
                                             const tag = tags.find((t) => t.id === transaction.tag_id);
                                             const goal = goals.find((g) => g.id === transaction.goal_id);
                                             const isExpense = transaction.type === 'expense';
-                                            const isVirtual = transaction.id.includes('_');
+                                                const isVirtual = transaction.id.includes('_') || !!transaction.parent_transaction_id;
 
                                             return (
                                                 <div
@@ -544,11 +554,11 @@ export const TransactionsPage: React.FC = () => {
                                                     <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Descrição</th>
                                                     <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Conta</th>
                                                     <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Tag</th>
-                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Meta</th>
-                                                    <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
-                                                    <th className="p-3 text-right text-sm font-semibold text-muted-foreground">Valor</th>
-                                                    <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Ações</th>
-                                                </tr>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Meta</th>
+                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
+                                                <th className="p-3 text-right text-sm font-semibold text-muted-foreground">Valor</th>
+                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Ações</th>
+                                            </tr>
                                             </thead>
                                             <tbody>
                                                 {transactions.map((transaction) => {
@@ -566,12 +576,14 @@ export const TransactionsPage: React.FC = () => {
                                                             <td className="p-3 text-sm text-foreground border-b border-border/60">{formatDate(transaction.date)}</td>
                                                             <td className="p-3 text-sm text-foreground border-b border-border/60">
                                                                 {transaction.description}
-                                                                {transaction.hide_from_reports && (
-                                                                    <span className="ml-2 text-xs text-muted-foreground">(Oculto)</span>
-                                                                )}
-                                                                {isVirtual && (
-                                                                    <span className="ml-2 text-xs text-blue-500">(Recorrente)</span>
-                                                                )}
+                                                            {transaction.hide_from_reports && (
+                                                                <span className="ml-2 text-xs text-muted-foreground">(Oculto)</span>
+                                                            )}
+                                                            {isVirtual && (
+                                                                <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-900/50 dark:text-blue-200">
+                                                                    Recorrente
+                                                                </span>
+                                                            )}
                                                             </td>
                                                             <td className="p-3 text-sm text-foreground border-b border-border/60">{account?.name || '-'}</td>
                                                             <td className="p-3 text-sm text-foreground border-b border-border/60">{tag?.name || '-'}</td>
@@ -589,6 +601,11 @@ export const TransactionsPage: React.FC = () => {
                                                             >
                                                                 {isExpense && '-'}
                                                                 {formatCurrency(parseFloat(transaction.amount.toString()))}
+                                                                {transaction.installment_total && transaction.installment_total > 1 && (
+                                                                    <span className="ml-2 text-xs text-muted-foreground">
+                                                                        (Total {formatCurrency(parseFloat(transaction.amount.toString()) * transaction.installment_total)})
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                             <td className="p-3 border-b border-border/60">
                                                                 <div className="flex justify-center gap-2">

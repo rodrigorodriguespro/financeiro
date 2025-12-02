@@ -77,8 +77,8 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                 amount: formatCurrency(Math.abs(parseFloat(transaction.amount.toString()))),
                 type: transaction.type,
                 account_id: transaction.account_id,
-                tag_id: transaction.tag_id || '',
-                goal_id: transaction.goal_id || '',
+                tag_id: transaction.type === 'income' ? '' : (transaction.tag_id || ''),
+                goal_id: transaction.type === 'income' ? '' : (transaction.goal_id || ''),
                 hide_from_reports: transaction.hide_from_reports,
                 is_paid: transaction.is_paid ?? false,
                 recurrence_type: transaction.recurrence_type,
@@ -144,13 +144,26 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
             } else {
                 // Criar
                 if (formData.recurrence_type === 'installment' && formData.installment_total) {
-                    // Criar múltiplas transações para parcelas
+                    // Criar transação mãe oculta e parcelas vinculadas
                     const installments = parseInt(formData.installment_total);
                     const installmentAmount = amount / installments;
                     const transactions = [];
 
                     const originalDate = new Date(formData.date);
                     const originalDay = originalDate.getDate();
+
+                    const { data: master, error: masterError } = await supabase
+                        .from('transactions')
+                        .insert({
+                            ...transactionData,
+                            hide_from_reports: true,
+                            installment_current: null,
+                        })
+                        .select('id')
+                        .single();
+
+                    if (masterError) throw masterError;
+                    if (!master?.id) throw new Error('Falha ao criar transação pai de parcelamento.');
 
                     for (let i = 0; i < installments; i++) {
                         const installmentDate = new Date(formData.date);
@@ -178,6 +191,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                             amount: installmentAmount,
                             date: installmentDate.toISOString().split('T')[0],
                             installment_current: i + 1,
+                            parent_transaction_id: master.id,
                             description: `${formData.description} (${i + 1}/${installments})`,
                         });
                     }
@@ -318,6 +332,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                             id="tag"
                             value={formData.tag_id}
                             onChange={(e) => setFormData({ ...formData, tag_id: e.target.value })}
+                            disabled={formData.type === 'income'}
                         >
                             <option value="">Sem categoria</option>
                             {tags.map((tag) => (
@@ -334,6 +349,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                             id="goal"
                             value={formData.goal_id}
                             onChange={(e) => setFormData({ ...formData, goal_id: e.target.value })}
+                            disabled={formData.type === 'income'}
                         >
                             <option value="">Sem meta</option>
                             {goals.map((goal) => (
@@ -358,7 +374,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                     </div>
 
                     {formData.recurrence_type === 'installment' && (
-                        <div>
+                        <div className="space-y-1">
                             <Label htmlFor="installments">Número de Parcelas</Label>
                             <Input
                                 id="installments"
@@ -368,6 +384,15 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                                 onChange={(e) => setFormData({ ...formData, installment_total: e.target.value })}
                                 required
                             />
+                            {formData.amount && formData.installment_total && (
+                                <p className="text-xs text-muted-foreground">
+                                    Ficará {formData.installment_total}x de{' '}
+                                    {formatCurrency(
+                                        parseFloat(formData.amount.replace(/\./g, '').replace(',', '.')) /
+                                        Math.max(1, parseInt(formData.installment_total))
+                                    )}
+                                </p>
+                            )}
                         </div>
                     )}
 
