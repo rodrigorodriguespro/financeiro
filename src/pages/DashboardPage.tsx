@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { TopBar } from '../components/TopBar';
 import { SummaryCards } from '../components/SummaryCards';
 import { FinancialHistoryChart } from '../components/FinancialHistoryChart';
 import { ExpensesByTagChart } from '../components/ExpensesByTagChart';
@@ -10,11 +9,19 @@ import { GoalProgress } from '../components/GoalProgress';
 import { RecentTransactions } from '../components/RecentTransactions';
 import { GoalsConfigDialog } from '../components/GoalsConfigDialog';
 import { useDashboardData } from '../hooks/useDashboardData';
+import { Button } from '../components/ui/Button';
+import { Plus } from 'lucide-react';
+import { IonHeader, IonToolbar } from '@ionic/react';
+import { useTheme } from '../contexts/ThemeContext';
+import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
     const { user } = useAuth();
     const history = useHistory();
     const [showGoalsConfig, setShowGoalsConfig] = useState(false);
+    const [showTotals, setShowTotals] = useState(true);
+    const { isDark, toggleTheme } = useTheme();
+    const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
 
     // Mês atual por padrão
     const getCurrentMonth = () => {
@@ -84,6 +91,30 @@ export const DashboardPage: React.FC = () => {
         history.push('/transactions');
     };
 
+    React.useEffect(() => {
+        const saved = localStorage.getItem('dashboard_show_totals');
+        if (saved !== null) {
+            setShowTotals(saved === 'true');
+        }
+    }, []);
+
+    React.useEffect(() => {
+        localStorage.setItem('dashboard_show_totals', showTotals ? 'true' : 'false');
+    }, [showTotals]);
+
+    React.useEffect(() => {
+        const now = new Date();
+        const list: { value: string; label: string }[] = [];
+        for (let i = -6; i <= 6; i++) {
+            const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+            const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+            list.push({ value, label: formattedLabel });
+        }
+        setMonths(list);
+    }, []);
+
     if (loading) {
         return (
             <IonPage>
@@ -98,15 +129,54 @@ export const DashboardPage: React.FC = () => {
 
     return (
         <IonPage>
-            <TopBar
-                selectedMonth={selectedMonth}
-                onMonthChange={setSelectedMonth}
-                onAddTransaction={handleAddTransaction}
-            />
+            <IonHeader>
+                <IonToolbar className="!bg-card !text-card-foreground border-b border-border">
+                    <div className="flex items-center justify-between px-4 py-2 gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <select
+                                    value={selectedMonth}
+                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                    className="appearance-none rounded-lg border border-input bg-card px-4 py-2 pr-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring"
+                                >
+                                    {months.map((month) => (
+                                        <option key={month.value} value={month.value}>
+                                            {month.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 opacity-50">
+                                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleTheme}
+                                aria-label="Alternar tema"
+                            >
+                                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowTotals((prev) => !prev)}
+                                aria-label={showTotals ? 'Ocultar totais' : 'Mostrar totais'}
+                            >
+                                {showTotals ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </Button>
+                        </div>
+                    </div>
+                </IonToolbar>
+            </IonHeader>
             <IonContent className="ion-padding">
                 <div className="space-y-6 bg-background p-4">
                     {/* Cards de Resumo */}
-                    <SummaryCards income={income} expenses={expenses} />
+                    <SummaryCards income={income} expenses={expenses} showTotals={showTotals} />
 
                     {/* Gráficos */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -139,6 +209,16 @@ export const DashboardPage: React.FC = () => {
                     }}
                 />
             )}
+
+            <Button
+                variant="default"
+                size="icon"
+                onClick={handleAddTransaction}
+                className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+                aria-label="Adicionar transação"
+            >
+                <Plus className="h-6 w-6" />
+            </Button>
         </IonPage>
     );
 };

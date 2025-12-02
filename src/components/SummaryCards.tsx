@@ -5,9 +5,10 @@ import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 interface SummaryCardsProps {
     income: number;
     expenses: number;
+    showTotals?: boolean;
 }
 
-export const SummaryCards: React.FC<SummaryCardsProps> = ({ income, expenses }) => {
+export const SummaryCards: React.FC<SummaryCardsProps> = ({ income, expenses, showTotals = true }) => {
     const balance = income - expenses;
 
     const formatCurrency = (value: number) => {
@@ -25,7 +26,9 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ income, expenses }) 
                     <TrendingUp className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(income)}</div>
+                    <div className="text-2xl font-bold text-green-600">
+                        {showTotals ? formatCurrency(income) : '••••'}
+                    </div>
                 </CardContent>
             </Card>
 
@@ -35,7 +38,9 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ income, expenses }) 
                     <TrendingDown className="h-4 w-4 text-red-600" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-red-600">{formatCurrency(expenses)}</div>
+                    <div className="text-2xl font-bold text-red-600">
+                        {showTotals ? formatCurrency(expenses) : '••••'}
+                    </div>
                 </CardContent>
             </Card>
 
@@ -46,7 +51,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ income, expenses }) 
                 </CardHeader>
                 <CardContent>
                     <div className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(balance)}
+                        {showTotals ? formatCurrency(balance) : '••••'}
                     </div>
                 </CardContent>
             </Card>

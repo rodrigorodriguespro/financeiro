@@ -11,16 +11,18 @@ import { Label } from '../components/ui/Label';
 import { TransactionFormDialog } from '../components/TransactionFormDialog';
 import { ManageAccountsDialog } from '../components/ManageAccountsDialog';
 import { ManageTagsDialog } from '../components/ManageTagsDialog';
-import { Edit2, Trash2, Filter, X, Settings, Plus } from 'lucide-react';
+import { Edit2, Trash2, Filter, X, Settings, Plus, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useHistory } from 'react-router-dom';
 import { DatePickerWithRange } from '../components/ui/DatePickerWithRange';
 import { type DateRange } from 'react-day-picker';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { Checkbox } from '../components/ui/Checkbox';
+import { useTheme } from '../contexts/ThemeContext';
 
 export const TransactionsPage: React.FC = () => {
     const { user } = useAuth();
     const history = useHistory();
+    const { isDark, toggleTheme } = useTheme();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [tags, setTags] = useState<Tag[]>([]);
@@ -45,14 +47,27 @@ export const TransactionsPage: React.FC = () => {
         goalId: '',
         description: '',
         paidStatus: 'all' as 'all' | 'paid' | 'unpaid',
+        type: 'all' as 'all' | 'income' | 'expense',
     });
     const [showFilters, setShowFilters] = useState(false);
+    const [showTotals, setShowTotals] = useState(true);
 
     useEffect(() => {
         if (user && dateRange?.from && dateRange?.to) {
             fetchData();
         }
     }, [user, dateRange, filters]);
+
+    useEffect(() => {
+        const saved = localStorage.getItem('transactions_show_totals');
+        if (saved !== null) {
+            setShowTotals(saved === 'true');
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('transactions_show_totals', showTotals ? 'true' : 'false');
+    }, [showTotals]);
 
     const fetchData = async () => {
         if (!user || !dateRange?.from || !dateRange?.to) return;
@@ -101,6 +116,7 @@ export const TransactionsPage: React.FC = () => {
             if (filters.description) query = query.ilike('description', `%${filters.description}%`);
             if (filters.paidStatus === 'paid') query = query.eq('is_paid', true);
             if (filters.paidStatus === 'unpaid') query = query.eq('is_paid', false);
+            if (filters.type !== 'all') query = query.eq('type', filters.type);
 
             const { data: transactionsData, error: transactionsError } = await query;
             if (transactionsError) throw transactionsError;
@@ -120,6 +136,7 @@ export const TransactionsPage: React.FC = () => {
             if (filters.description) recurringInstancesQuery = recurringInstancesQuery.ilike('description', `%${filters.description}%`);
             if (filters.paidStatus === 'paid') recurringInstancesQuery = recurringInstancesQuery.eq('is_paid', true);
             if (filters.paidStatus === 'unpaid') recurringInstancesQuery = recurringInstancesQuery.eq('is_paid', false);
+            if (filters.type !== 'all') recurringInstancesQuery = recurringInstancesQuery.eq('type', filters.type);
 
             const { data: recurringInstancesData, error: recurringInstancesError } = await recurringInstancesQuery;
             if (recurringInstancesError) throw recurringInstancesError;
@@ -187,6 +204,7 @@ export const TransactionsPage: React.FC = () => {
             goalId: '',
             description: '',
             paidStatus: 'all',
+            type: 'all',
         });
         setDateRange({
             from: startOfMonth(new Date()),
@@ -258,11 +276,31 @@ export const TransactionsPage: React.FC = () => {
         <IonPage>
             <IonHeader>
                 <IonToolbar className="!bg-card !text-card-foreground border-b border-border">
-                    <div className="flex items-center justify-between px-4 py-2">
-                        <h1 className="text-xl font-bold">Transações</h1>
-                        <Button variant="outline" size="sm" onClick={() => history.push('/dashboard')}>
-                            Voltar
-                        </Button>
+                    <div className="flex items-center justify-between px-4 py-2 gap-3">
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => history.push('/dashboard')}>
+                                Voltar
+                            </Button>
+                            <h1 className="text-lg font-semibold">Transações</h1>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleTheme}
+                                aria-label="Alternar tema"
+                            >
+                                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowTotals((prev) => !prev)}
+                                aria-label={showTotals ? 'Ocultar totais' : 'Mostrar totais'}
+                            >
+                                {showTotals ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </Button>
+                        </div>
                     </div>
                 </IonToolbar>
             </IonHeader>
@@ -372,6 +410,17 @@ export const TransactionsPage: React.FC = () => {
                                             <option value="unpaid">Não pago</option>
                                         </Select>
                                     </div>
+                                    <div>
+                                        <Label>Tipo</Label>
+                                        <Select
+                                            value={filters.type}
+                                            onChange={(e) => setFilters({ ...filters, type: e.target.value as any })}
+                                        >
+                                            <option value="all">Todos</option>
+                                            <option value="income">Receita</option>
+                                            <option value="expense">Despesa</option>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <div className="mt-4">
                                     <Button variant="outline" size="sm" onClick={clearFilters}>
@@ -391,28 +440,28 @@ export const TransactionsPage: React.FC = () => {
                                 <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Despesas</p>
                                     <p className="text-lg font-semibold text-red-600">
-                                        {formatCurrency(totals.expenses)}
+                                        {showTotals ? formatCurrency(totals.expenses) : '••••'}
                                     </p>
                                 </div>
                                 <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Receitas</p>
                                     <p className="text-lg font-semibold text-green-600">
-                                        {formatCurrency(totals.income)}
+                                        {showTotals ? formatCurrency(totals.income) : '••••'}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        Recebidas: {formatCurrency(totals.paidIncome)}
+                                        Recebidas: {showTotals ? formatCurrency(totals.paidIncome) : '••••'}
                                     </p>
                                 </div>
                                 <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Despesas Pagas</p>
                                     <p className="text-lg font-semibold text-blue-600">
-                                        {formatCurrency(totals.paidExpenses)}
+                                        {showTotals ? formatCurrency(totals.paidExpenses) : '••••'}
                                     </p>
                                 </div>
                                 <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                                     <p className="text-xs text-muted-foreground">Despesas em aberto</p>
                                     <p className="text-lg font-semibold text-orange-600">
-                                        {formatCurrency(totals.unpaidExpenses)}
+                                        {showTotals ? formatCurrency(totals.unpaidExpenses) : '••••'}
                                     </p>
                                 </div>
                             </div>
