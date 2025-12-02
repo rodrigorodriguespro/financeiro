@@ -16,6 +16,7 @@ interface TransactionFormDialogProps {
     goals: Goal[];
     transaction?: Transaction | null;
     onSuccess: () => void;
+    onDelete?: (transaction: Transaction) => void;
 }
 
 export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
@@ -27,6 +28,7 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
     goals,
     transaction,
     onSuccess,
+    onDelete,
 }) => {
     const [formData, setFormData] = useState({
         description: '',
@@ -144,26 +146,16 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
             } else {
                 // Criar
                 if (formData.recurrence_type === 'installment' && formData.installment_total) {
-                    // Criar transação mãe oculta e parcelas vinculadas
+                    // Criar parcelas vinculadas a um mesmo ID (sem item oculto)
                     const installments = parseInt(formData.installment_total);
                     const installmentAmount = amount / installments;
                     const transactions = [];
+                    const seriesId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+                        ? crypto.randomUUID()
+                        : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
                     const originalDate = new Date(formData.date);
                     const originalDay = originalDate.getDate();
-
-                    const { data: master, error: masterError } = await supabase
-                        .from('transactions')
-                        .insert({
-                            ...transactionData,
-                            hide_from_reports: true,
-                            installment_current: null,
-                        })
-                        .select('id')
-                        .single();
-
-                    if (masterError) throw masterError;
-                    if (!master?.id) throw new Error('Falha ao criar transação pai de parcelamento.');
 
                     for (let i = 0; i < installments; i++) {
                         const installmentDate = new Date(formData.date);
@@ -188,10 +180,11 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
 
                         transactions.push({
                             ...transactionData,
+                            id: i === 0 ? seriesId : undefined,
                             amount: installmentAmount,
                             date: installmentDate.toISOString().split('T')[0],
                             installment_current: i + 1,
-                            parent_transaction_id: master.id,
+                            parent_transaction_id: seriesId,
                             description: `${formData.description} (${i + 1}/${installments})`,
                         });
                     }
@@ -423,6 +416,15 @@ export const TransactionFormDialog: React.FC<TransactionFormDialogProps> = ({
                     </div>
 
                     <div className="flex justify-end gap-2">
+                        {transaction && onDelete && (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => onDelete(transaction)}
+                            >
+                                Excluir
+                            </Button>
+                        )}
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             Cancelar
                         </Button>

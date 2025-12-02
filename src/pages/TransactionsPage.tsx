@@ -11,7 +11,7 @@ import { Label } from '../components/ui/Label';
 import { TransactionFormDialog } from '../components/TransactionFormDialog';
 import { ManageAccountsDialog } from '../components/ManageAccountsDialog';
 import { ManageTagsDialog } from '../components/ManageTagsDialog';
-import { Edit2, Trash2, Filter, X, Settings, Plus, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { Filter, X, Settings, Plus, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useHistory } from 'react-router-dom';
 import { DatePickerWithRange } from '../components/ui/DatePickerWithRange';
 import { type DateRange } from 'react-day-picker';
@@ -43,15 +43,37 @@ export const TransactionsPage: React.FC = () => {
         to: endOfMonth(new Date()),
     });
 
-    const [filters, setFilters] = useState({
-        tagId: '',
-        accountId: '',
-        goalId: '',
-        description: '',
-        paidStatus: 'all' as 'all' | 'paid' | 'unpaid',
-        type: 'all' as 'all' | 'income' | 'expense',
+    const [filters, setFilters] = useState(() => {
+        const saved = localStorage.getItem('transactions_filters');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                return {
+                    tagId: parsed.tagId || '',
+                    accountId: parsed.accountId || '',
+                    goalId: parsed.goalId || '',
+                    description: parsed.description || '',
+                    paidStatus: parsed.paidStatus || 'all',
+                    type: parsed.type || 'all',
+                };
+            } catch {
+                // fallback
+            }
+        }
+        return {
+            tagId: '',
+            accountId: '',
+            goalId: '',
+            description: '',
+            paidStatus: 'all' as 'all' | 'paid' | 'unpaid',
+            type: 'all' as 'all' | 'income' | 'expense',
+        };
     });
     const [showFilters, setShowFilters] = useState(false);
+
+    useEffect(() => {
+        localStorage.setItem('transactions_filters', JSON.stringify(filters));
+    }, [filters]);
 
     useEffect(() => {
         if (user && dateRange?.from && dateRange?.to) {
@@ -98,7 +120,6 @@ export const TransactionsPage: React.FC = () => {
                 .gte('date', startDate)
                 .lte('date', endDate)
                 .neq('recurrence_type', 'recurring') // Excluir templates recorrentes
-                .is('parent_transaction_id', null)
                 .order('date', { ascending: false });
 
             if (filters.tagId) query = query.eq('tag_id', filters.tagId);
@@ -119,7 +140,8 @@ export const TransactionsPage: React.FC = () => {
                 .eq('user_id', user.id)
                 .gte('date', startDate)
                 .lte('date', endDate)
-                .not('parent_transaction_id', 'is', null);
+                .not('parent_transaction_id', 'is', null)
+                .eq('recurrence_type', 'recurring');
 
             if (filters.tagId) recurringInstancesQuery = recurringInstancesQuery.eq('tag_id', filters.tagId);
             if (filters.accountId) recurringInstancesQuery = recurringInstancesQuery.eq('account_id', filters.accountId);
@@ -486,7 +508,7 @@ export const TransactionsPage: React.FC = () => {
                                             const tag = tags.find((t) => t.id === transaction.tag_id);
                                             const goal = goals.find((g) => g.id === transaction.goal_id);
                                             const isExpense = transaction.type === 'expense';
-                                                const isVirtual = transaction.id.includes('_') || !!transaction.parent_transaction_id;
+                                            const isVirtual = transaction.recurrence_type === 'recurring';
 
                                             return (
                                                 <div
@@ -495,10 +517,22 @@ export const TransactionsPage: React.FC = () => {
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-sm text-muted-foreground">{formatDate(transaction.date)}</span>
-                                                        <span className={`text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
-                                                            {isExpense && '-'}
-                                                            {formatCurrency(parseFloat(transaction.amount.toString()))}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {isVirtual && (
+                                                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-900/50 dark:text-blue-200">
+                                                                    Recorrente
+                                                                </span>
+                                                            )}
+                                                            {transaction.installment_total && transaction.installment_total > 1 && (
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    Total {formatCurrency(parseFloat(transaction.amount.toString()) * transaction.installment_total)}
+                                                                </span>
+                                                            )}
+                                                            <span className={`text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                                                                {isExpense && '-'}
+                                                                {formatCurrency(parseFloat(transaction.amount.toString()))}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <div className="mt-1 text-sm font-medium text-foreground">{transaction.description}</div>
                                                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
@@ -511,35 +545,13 @@ export const TransactionsPage: React.FC = () => {
                                                                 checked={transaction.is_paid}
                                                                 onChange={() => handleTogglePaid(transaction)}
                                                                 aria-label="Marcar como pago"
+                                                                className="h-5 w-5 accent-green-500"
                                                             />
                                                         </span>
                                                     </div>
-                                                    {isVirtual && (
-                                                        <div className="mt-1 text-[11px] text-blue-500">Recorrente</div>
-                                                    )}
                                                     {transaction.hide_from_reports && (
                                                         <div className="text-[11px] text-muted-foreground">Oculto dos relatórios</div>
                                                     )}
-                                                    <div className="mt-3 flex justify-end gap-2">
-                                                        <Button
-                                                            size="icon"
-                                                            variant="ghost"
-                                                            onClick={() => {
-                                                                const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
-                                                                setEditingTransaction({ ...transaction, id: baseId });
-                                                                setShowTransactionForm(true);
-                                                            }}
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            size="icon"
-                                                            variant="ghost"
-                                                            onClick={() => handleDelete(transaction)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </div>
                                                 </div>
                                             );
                                         })}
@@ -551,13 +563,10 @@ export const TransactionsPage: React.FC = () => {
                                             <thead className="bg-muted/60">
                                                 <tr className='p-4'>
                                                     <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Data</th>
-                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Descrição</th>
-                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Conta</th>
-                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Tag</th>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Meta</th>
-                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Descrição</th>
+                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Conta</th>
                                                 <th className="p-3 text-right text-sm font-semibold text-muted-foreground">Valor</th>
-                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Ações</th>
+                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -566,7 +575,7 @@ export const TransactionsPage: React.FC = () => {
                                                     const tag = tags.find((t) => t.id === transaction.tag_id);
                                                     const goal = goals.find((g) => g.id === transaction.goal_id);
                                                     const isExpense = transaction.type === 'expense';
-                                                    const isVirtual = transaction.id.includes('_');
+                                                    const isVirtual = transaction.recurrence_type === 'recurring';
 
                                                     return (
                                                         <tr
@@ -574,60 +583,61 @@ export const TransactionsPage: React.FC = () => {
                                                             className="transition hover:bg-muted/40"
                                                         >
                                                             <td className="p-3 text-sm text-foreground border-b border-border/60">{formatDate(transaction.date)}</td>
-                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">
-                                                                {transaction.description}
-                                                            {transaction.hide_from_reports && (
-                                                                <span className="ml-2 text-xs text-muted-foreground">(Oculto)</span>
-                                                            )}
-                                                            {isVirtual && (
-                                                                <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-900/50 dark:text-blue-200">
-                                                                    Recorrente
-                                                                </span>
-                                                            )}
+                                                            <td
+                                                                className="p-3 text-sm text-foreground border-b border-border/60 cursor-pointer"
+                                                                onClick={() => {
+                                                                    const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
+                                                                    setEditingTransaction({ ...transaction, id: baseId });
+                                                                    setShowTransactionForm(true);
+                                                                }}
+                                                            >
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-medium">{transaction.description}</span>
+                                                                        {transaction.hide_from_reports && (
+                                                                            <span className="ml-1 text-xs text-muted-foreground">(Oculto)</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                                                        {tag?.name && (
+                                                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                                                                {tag.name}
+                                                                            </span>
+                                                                        )}
+                                                                        {goal?.name && (
+                                                                            <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-foreground">
+                                                                                {goal.name}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             </td>
                                                             <td className="p-3 text-sm text-foreground border-b border-border/60">{account?.name || '-'}</td>
-                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{tag?.name || '-'}</td>
-                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{goal?.name || '-'}</td>
+                                                            <td className="p-3 text-right text-sm font-semibold border-b border-border/60">
+                                                                <div className="flex items-center justify-end gap-2">
+                                                                    {isVirtual && (
+                                                                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-900/50 dark:text-blue-200">
+                                                                            Recorrente
+                                                                        </span>
+                                                                    )}
+                                                                    {transaction.installment_total && transaction.installment_total > 1 && (
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                            Total {formatCurrency(parseFloat(transaction.amount.toString()) * transaction.installment_total)}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className={`${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                                                                        {isExpense && '-'}
+                                                                        {formatCurrency(parseFloat(transaction.amount.toString()))}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
                                                             <td className="p-3 text-center border-b border-border/60">
                                                                 <Checkbox
                                                                     checked={transaction.is_paid}
                                                                     onChange={() => handleTogglePaid(transaction)}
                                                                     aria-label="Marcar como pago"
+                                                                    className="h-5 w-5 accent-green-500"
                                                                 />
-                                                            </td>
-                                                            <td
-                                                                className={`p-3 text-right text-sm font-semibold border-b border-border/60 ${isExpense ? 'text-red-600' : 'text-green-600'
-                                                                    }`}
-                                                            >
-                                                                {isExpense && '-'}
-                                                                {formatCurrency(parseFloat(transaction.amount.toString()))}
-                                                                {transaction.installment_total && transaction.installment_total > 1 && (
-                                                                    <span className="ml-2 text-xs text-muted-foreground">
-                                                                        (Total {formatCurrency(parseFloat(transaction.amount.toString()) * transaction.installment_total)})
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-3 border-b border-border/60">
-                                                                <div className="flex justify-center gap-2">
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        onClick={() => {
-                                                                            const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
-                                                                            setEditingTransaction({ ...transaction, id: baseId });
-                                                                            setShowTransactionForm(true);
-                                                                        }}
-                                                                    >
-                                                                        <Edit2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        onClick={() => handleDelete(transaction)}
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                                                    </Button>
-                                                                </div>
                                                             </td>
                                                         </tr>
                                                     );
@@ -657,6 +667,11 @@ export const TransactionsPage: React.FC = () => {
                         goals={goals}
                         transaction={editingTransaction}
                         onSuccess={fetchData}
+                        onDelete={async (t) => {
+                            await handleDelete(t);
+                            setShowTransactionForm(false);
+                            setEditingTransaction(null);
+                        }}
                     />
 
                     <ManageAccountsDialog
