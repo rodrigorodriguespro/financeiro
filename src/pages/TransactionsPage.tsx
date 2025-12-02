@@ -244,15 +244,14 @@ export const TransactionsPage: React.FC = () => {
             if (t.type === 'expense') {
                 acc.expenses += amount;
                 if (t.is_paid) acc.paidExpenses += amount;
+                else acc.unpaidExpenses += amount;
             } else {
                 acc.income += amount;
                 if (t.is_paid) acc.paidIncome += amount;
             }
-            if (t.is_paid) acc.paid += amount;
-            else acc.unpaid += amount;
             return acc;
         },
-        { expenses: 0, income: 0, paid: 0, unpaid: 0, paidIncome: 0, paidExpenses: 0 }
+        { expenses: 0, income: 0, paidIncome: 0, paidExpenses: 0, unpaidExpenses: 0 }
     );
 
     return (
@@ -405,15 +404,15 @@ export const TransactionsPage: React.FC = () => {
                                     </p>
                                 </div>
                                 <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
-                                    <p className="text-xs text-muted-foreground">Pagos</p>
+                                    <p className="text-xs text-muted-foreground">Despesas Pagas</p>
                                     <p className="text-lg font-semibold text-blue-600">
-                                        {formatCurrency(totals.paid)}
+                                        {formatCurrency(totals.paidExpenses)}
                                     </p>
                                 </div>
                                 <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
-                                    <p className="text-xs text-muted-foreground">Não pagos</p>
+                                    <p className="text-xs text-muted-foreground">Despesas em aberto</p>
                                     <p className="text-lg font-semibold text-orange-600">
-                                        {formatCurrency(totals.unpaid)}
+                                        {formatCurrency(totals.unpaidExpenses)}
                                     </p>
                                 </div>
                             </div>
