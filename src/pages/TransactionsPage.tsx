@@ -510,10 +510,21 @@ export const TransactionsPage: React.FC = () => {
                                             const isExpense = transaction.type === 'expense';
                                             const isVirtual = transaction.recurrence_type === 'recurring';
 
+                                            const openEdit = () => {
+                                                const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
+                                                setEditingTransaction({ ...transaction, id: baseId });
+                                                setShowTransactionForm(true);
+                                            };
+
                                             return (
                                                 <div
                                                     key={transaction.id}
                                                     className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                                                    onClick={(e) => {
+                                                        // Evitar abrir ao clicar nos controles internos
+                                                        if ((e.target as HTMLElement).closest('label,input')) return;
+                                                        openEdit();
+                                                    }}
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-sm text-muted-foreground">{formatDate(transaction.date)}</span>
