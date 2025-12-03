@@ -14,7 +14,6 @@ comando:
 npm run build
 npx cap sync android
 cd android
-./gradlew assembleRelease
 ./gradlew clean                              40s 22:25:50
 ./gradlew assembleDebug
 

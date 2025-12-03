@@ -558,16 +558,16 @@ export const TransactionsPage: React.FC = () => {
                                     </div>
 
                                     {/* Tabela desktop/tablet */}
-                                    <div className="hidden overflow-x-auto md:block">
-                                        <table className="w-full border-separate border-spacing-0 ml-4">
+                                    <div className="hidden overflow-x-auto md:block p-10">
+                                        <table className="w-full border-separate border-spacing-0">
                                             <thead className="bg-muted/60">
-                                                <tr className='p-4'>
-                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Data</th>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Descrição</th>
-                                                <th className="p-3 text-left text-sm font-semibold text-muted-foreground">Conta</th>
-                                                <th className="p-3 text-right text-sm font-semibold text-muted-foreground">Valor</th>
-                                                <th className="p-3 text-center text-sm font-semibold text-muted-foreground">Pago</th>
-                                            </tr>
+                                                <tr>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground"><p className='p-5 text-xl'>Data</p></th>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground"><p className='p-5 text-xl'>Descrição</p></th>
+                                                    <th className="p-3 text-left text-sm font-semibold text-muted-foreground"><p className='p-5 text-xl'>Conta</p></th>
+                                                    <th className="p-3 text-right text-sm font-semibold text-muted-foreground"><p className='p-5 text-xl'>Valor</p></th>
+                                                    <th className="p-3 text-center text-sm font-semibold text-muted-foreground"><p className='p-5 text-xl'>Pago</p></th>
+                                                </tr>
                                             </thead>
                                             <tbody>
                                                 {transactions.map((transaction) => {
@@ -580,18 +580,18 @@ export const TransactionsPage: React.FC = () => {
                                                     return (
                                                         <tr
                                                             key={transaction.id}
-                                                            className="transition hover:bg-muted/40"
+                                                            className="transition hover:bg-muted/40 p-4"
                                                         >
-                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{formatDate(transaction.date)}</td>
+                                                            <td className="p-3 text-xl text-foreground border-b border-border/60"><p className='pl-4'>{formatDate(transaction.date)}</p></td>
                                                             <td
-                                                                className="p-3 text-sm text-foreground border-b border-border/60 cursor-pointer"
+                                                                className="text-xl text-foreground border-b border-border/60 cursor-pointer"
                                                                 onClick={() => {
                                                                     const baseId = transaction.original_id || transaction.id.split('_')[0] || transaction.id;
                                                                     setEditingTransaction({ ...transaction, id: baseId });
                                                                     setShowTransactionForm(true);
                                                                 }}
                                                             >
-                                                                <div className="flex flex-col gap-1">
+                                                                <div className="flex flex-col gap-1 p-4">
                                                                     <div className="flex items-center gap-2">
                                                                         <span className="font-medium">{transaction.description}</span>
                                                                         {transaction.hide_from_reports && (
@@ -600,23 +600,23 @@ export const TransactionsPage: React.FC = () => {
                                                                     </div>
                                                                     <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                                                         {tag?.name && (
-                                                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                                                            <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-600 dark:bg-purple-900/50 dark:text-purple-200">
                                                                                 {tag.name}
                                                                             </span>
                                                                         )}
                                                                         {goal?.name && (
-                                                                            <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-foreground">
+                                                                            <span className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground">
                                                                                 {goal.name}
                                                                             </span>
                                                                         )}
                                                                     </div>
                                                                 </div>
                                                             </td>
-                                                            <td className="p-3 text-sm text-foreground border-b border-border/60">{account?.name || '-'}</td>
+                                                            <td className="p-3 text-xl text-foreground border-b border-border/60">{account?.name || '-'}</td>
                                                             <td className="p-3 text-right text-sm font-semibold border-b border-border/60">
                                                                 <div className="flex items-center justify-end gap-2">
                                                                     {isVirtual && (
-                                                                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-900/50 dark:text-blue-200">
+                                                                        <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-900/50 dark:text-blue-200">
                                                                             Recorrente
                                                                         </span>
                                                                     )}
@@ -625,7 +625,7 @@ export const TransactionsPage: React.FC = () => {
                                                                             Total {formatCurrency(parseFloat(transaction.amount.toString()) * transaction.installment_total)}
                                                                         </span>
                                                                     )}
-                                                                    <span className={`${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                                                                    <span className={`${isExpense ? 'text-red-600' : 'text-green-600'} text-xl font-semibold`}>
                                                                         {isExpense && '-'}
                                                                         {formatCurrency(parseFloat(transaction.amount.toString()))}
                                                                     </span>
