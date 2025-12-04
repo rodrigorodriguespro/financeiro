@@ -6,7 +6,7 @@ import { useDashboardData } from '../hooks/useDashboardData';
 import { FinancialHistoryChart } from '../components/FinancialHistoryChart';
 import { ExpensesByTagChart } from '../components/ExpensesByTagChart';
 import { Button } from '../components/ui/Button';
-import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { Eye, EyeOff, Moon, Sun, Plus } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTotalsVisibility } from '../hooks/useTotalsVisibility';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
@@ -59,18 +59,30 @@ export const DashboardsPage: React.FC = () => {
     }, [transactions, tags]);
 
     const heatmapData = useMemo(() => {
+        const today = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 364);
         const map = new Map<string, number>();
-        monthsList.forEach((m) => map.set(m, 0));
         transactions
             .filter((t) => t.type === 'expense')
             .forEach((t) => {
-                const key = t.date.substring(0, 7);
-                if (map.has(key)) {
-                    map.set(key, (map.get(key) || 0) + 1);
-                }
+                map.set(t.date, (map.get(t.date) || 0) + 1);
             });
-        return monthsList.map((m) => ({ month: m, count: map.get(m) || 0 }));
-    }, [transactions, monthsList]);
+
+        const weeks: { date: string; count: number }[][] = [[]];
+        let cursor = new Date(start);
+        while (cursor <= today) {
+            const key = cursor.toISOString().split('T')[0];
+            const currentWeek = weeks[weeks.length - 1];
+            if (currentWeek.length === 7) {
+                weeks.push([]);
+            }
+            weeks[weeks.length - 1].push({ date: key, count: map.get(key) || 0 });
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        const maxCount = weeks.flat().reduce((m, d) => Math.max(m, d.count), 1) || 1;
+        return { weeks, maxCount };
+    }, [transactions]);
 
     const annualPaidIncome = useMemo(() => {
         const map = new Map<string, number>();
@@ -199,25 +211,6 @@ export const DashboardsPage: React.FC = () => {
                             </div>
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base">Heatmap de Despesas (último ano)</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-6 gap-2 text-[10px] text-muted-foreground">
-                                        {heatmapData.map((d) => (
-                                            <div key={d.month} className="flex items-center gap-2">
-                                                <span className="w-12 text-right">{d.month}</span>
-                                                <div
-                                                    className="h-3 flex-1 rounded-sm"
-                                                    style={{ backgroundColor: `rgba(239,68,68,${Math.min(1, d.count / 5)})` }}
-                                                    title={`${d.month} - ${d.count} despesas`}
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
                                     <CardTitle className="text-base">Receitas pagas - último ano</CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -292,6 +285,15 @@ export const DashboardsPage: React.FC = () => {
                         </div>
                     )}
                 </div>
+                <Button
+                    variant="default"
+                    size="icon"
+                    onClick={() => history.push('/transactions')}
+                    className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    aria-label="Ir para transações"
+                >
+                    <Plus className="h-6 w-6" />
+                </Button>
             </IonContent>
         </IonPage>
     );

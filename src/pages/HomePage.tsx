@@ -8,7 +8,7 @@ import { RecentTransactions } from '../components/RecentTransactions';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { Button } from '../components/ui/Button';
 import { useTheme } from '../contexts/ThemeContext';
-import { Eye, EyeOff, Moon, Sun, BarChart2, LogOut } from 'lucide-react';
+import { Eye, EyeOff, Moon, Sun, BarChart2, LogOut, Plus } from 'lucide-react';
 import { useTotalsVisibility } from '../hooks/useTotalsVisibility';
 
 export const HomePage: React.FC = () => {
@@ -122,6 +122,15 @@ export const HomePage: React.FC = () => {
                         </Button>
                     </div>
                 </div>
+                <Button
+                    variant="default"
+                    size="icon"
+                    onClick={() => history.push('/transactions')}
+                    className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    aria-label="Ir para transações"
+                >
+                    <Plus className="h-6 w-6" />
+                </Button>
             </IonContent>
         </IonPage>
     );
