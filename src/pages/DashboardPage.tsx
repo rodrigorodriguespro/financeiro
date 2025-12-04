@@ -59,11 +59,13 @@ export const DashboardPage: React.FC = () => {
         return goals.map((goal) => {
             const config = goalsConfig.find((c) => c.goal_id === goal.id);
             const percentage = config?.percentage || 0;
-            const total = (income * percentage) / 100;
+            const total = (income * percentage) / 100; // income já considera apenas receitas pagas
 
             const spent = transactions
                 .filter((t) => t.type === 'expense' && t.goal_id === goal.id)
                 .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
+
+            const remaining = total - spent;
 
             return {
                 id: goal.id,
@@ -71,6 +73,7 @@ export const DashboardPage: React.FC = () => {
                 percentage,
                 spent,
                 total,
+                remaining,
             };
         });
     }, [goals, goalsConfig, transactions, income]);

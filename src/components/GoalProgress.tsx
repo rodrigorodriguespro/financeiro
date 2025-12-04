@@ -10,6 +10,7 @@ interface GoalProgressProps {
         percentage: number;
         spent: number;
         total: number;
+        remaining: number;
     }>;
     onConfigClick?: () => void;
 }
@@ -39,6 +40,9 @@ export const GoalProgress: React.FC<GoalProgressProps> = ({ goals, onConfigClick
                     {goals.map((goal) => {
                         const progress = goal.total > 0 ? (goal.spent / goal.total) * 100 : 0;
                         const isOverBudget = progress > 100;
+                        const remainingLabel = goal.remaining >= 0
+                            ? `Falta ${formatCurrency(goal.remaining)}`
+                            : `- ${formatCurrency(Math.abs(goal.remaining))}`;
 
                         return (
                             <div key={goal.id} className="space-y-2">
@@ -57,6 +61,9 @@ export const GoalProgress: React.FC<GoalProgressProps> = ({ goals, onConfigClick
                                 </div>
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                     <span>{formatCurrency(goal.spent)}</span>
+                                    <span className={goal.remaining < 0 ? 'text-red-600' : 'text-muted-foreground'}>
+                                        {remainingLabel}
+                                    </span>
                                     <span>de {formatCurrency(goal.total)}</span>
                                 </div>
                             </div>

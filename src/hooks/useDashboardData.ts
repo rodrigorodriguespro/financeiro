@@ -25,92 +25,25 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                 const startDate = `${year}-${month}-01`;
                 const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
 
-                // Buscar transações do mês atual (únicas e parcelas)
+                // Buscar todas as transações do mês atual (inclui parcelas e recorrentes materializadas)
                 const { data: transactionsData, error: transactionsError } = await supabase
                     .from('transactions')
                     .select('*')
                     .eq('user_id', userId)
                     .gte('date', startDate)
                     .lte('date', endDate)
-                    .eq('hide_from_reports', false)
-                    .neq('recurrence_type', 'recurring') // Excluir recorrentes originais, vamos tratar separadamente
                     .order('date', { ascending: false });
 
                 if (transactionsError) throw transactionsError;
 
-                const normalizedTransactions = (transactionsData || []).map((t) => ({
+                const allTransactions = (transactionsData || []).map((t) => ({
                     ...t,
                     is_paid: t.is_paid ?? false,
                 }));
 
-                // Instâncias materializadas de recorrentes
-                const { data: recurringInstances, error: recurringInstancesError } = await supabase
-                    .from('transactions')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .not('parent_transaction_id', 'is', null)
-                    .gte('date', startDate)
-                    .lte('date', endDate);
-
-                if (recurringInstancesError) throw recurringInstancesError;
-                const existingKeys = new Set<string>();
-                normalizedTransactions.forEach((t) => {
-                    const key = `${t.parent_transaction_id || t.id}_${t.date}`;
-                    existingKeys.add(key);
-                });
-                (recurringInstances || []).forEach((ri) => {
-                    const key = `${ri.parent_transaction_id || ri.id}_${ri.date}`;
-                    existingKeys.add(key);
-                });
-
-                // Buscar transações recorrentes ativas criadas antes ou durante o mês selecionado
-                const { data: recurringData, error: recurringError } = await supabase
-                    .from('transactions')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .eq('recurrence_type', 'recurring')
-                    .lte('date', endDate) // Criadas antes do fim do mês
-                    .eq('hide_from_reports', false);
-
-                if (recurringError) throw recurringError;
-
-                // Processar recorrentes: gerar instância para o mês selecionado
-                const recurringInstancesGenerated = (recurringData || []).map(t => {
-                    // Parse manual da data para evitar problemas de timezone
-                    const [_, __, day] = t.date.split('-').map(Number);
-
-                    // Criar data no mês selecionado
-                    const targetDate = new Date(parseInt(year), parseInt(month) - 1, day);
-
-                    // Se o dia original não existe no mês selecionado (ex: 31 em Fev), usar o último dia
-                    const lastDayOfMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
-                    if (day > lastDayOfMonth) {
-                        targetDate.setDate(lastDayOfMonth);
-                    }
-
-                    const targetDateStr = targetDate.toISOString().split('T')[0];
-                    const key = `${t.id}_${targetDateStr}`;
-                    if (existingKeys.has(key)) {
-                        return null;
-                    }
-                    existingKeys.add(key);
-                    return {
-                        ...t,
-                        is_paid: t.is_paid ?? false,
-                        id: `${t.id}_${selectedMonth}`, // ID virtual único
-                        date: targetDateStr,
-                        original_id: t.id
-                    };
-                });
-
-                // Combinar transações normais com instâncias recorrentes (já deduplicadas)
-                const allTransactions = [...normalizedTransactions, ...(recurringInstances || []), ...recurringInstancesGenerated.filter(Boolean)].sort((a, b) =>
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
-                );
-
                 setTransactions(allTransactions);
 
-                // Calcular receitas e despesas do mês usando todas as transações
+                // Calcular receitas (pagas) e despesas (todas) do mês
                 const totalIncome = allTransactions
                     .filter((t) => t.type === 'income' && t.is_paid)
                     .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
@@ -135,7 +68,6 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                     .eq('user_id', userId)
                     .gte('date', historyStartDate.toISOString().split('T')[0])
                     .lte('date', historyEndDate.toISOString().split('T')[0])
-                    .eq('hide_from_reports', false)
                     .neq('recurrence_type', 'recurring');
 
                 if (historyError) throw historyError;
@@ -146,8 +78,7 @@ export const useDashboardData = (selectedMonth: string, userId: string | undefin
                     .select('date, amount, type, recurrence_type, is_paid')
                     .eq('user_id', userId)
                     .eq('recurrence_type', 'recurring')
-                    .lte('date', historyEndDate.toISOString().split('T')[0])
-                    .eq('hide_from_reports', false);
+                    .lte('date', historyEndDate.toISOString().split('T')[0]);
 
                 if (historyRecurringError) throw historyRecurringError;
 
