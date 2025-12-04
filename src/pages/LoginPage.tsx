@@ -23,7 +23,7 @@ export const LoginPage: React.FC = () => {
                 setError('Conta criada! Verifique seu email para confirmar.');
             } else {
                 await signIn(email, password);
-                history.push('/dashboard');
+                history.push('/home');
             }
         } catch (err: any) {
             setError(err.message || 'Erro ao autenticar');

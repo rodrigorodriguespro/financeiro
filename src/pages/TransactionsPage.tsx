@@ -19,6 +19,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTotalsVisibility } from '../hooks/useTotalsVisibility';
+import { BarChart2 } from 'lucide-react';
 
 export const TransactionsPage: React.FC = () => {
     const { user } = useAuth();
@@ -301,12 +302,20 @@ export const TransactionsPage: React.FC = () => {
                 <IonToolbar className="!bg-card !text-card-foreground border-b border-border">
                     <div className="flex items-center justify-between px-4 py-2 gap-3">
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => history.push('/dashboard')}>
+                            <Button variant="outline" size="sm" onClick={() => history.push('/home')}>
                                 Voltar
                             </Button>
                             <h1 className="text-lg font-semibold">Transações</h1>
                         </div>
                         <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => history.push('/dashboards')}
+                                aria-label="Dashboards"
+                            >
+                                <BarChart2 className="h-5 w-5" />
+                            </Button>
                             <Button
                                 variant="ghost"
                                 size="icon"

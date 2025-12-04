@@ -6,6 +6,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { HomePage } from './pages/HomePage';
+import { DashboardsPage } from './pages/DashboardsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { PrivateRoute } from './components/PrivateRoute';
 import { useNotifications } from './hooks/useNotifications';
@@ -21,9 +23,11 @@ const AppShell: React.FC = () => {
         <IonRouterOutlet>
           <Route exact path="/login" component={LoginPage} />
           <PrivateRoute exact path="/dashboard" component={DashboardPage} />
+          <PrivateRoute exact path="/home" component={HomePage} />
+          <PrivateRoute exact path="/dashboards" component={DashboardsPage} />
           <PrivateRoute exact path="/transactions" component={TransactionsPage} />
           <Route exact path="/">
-            <Redirect to="/dashboard" />
+            <Redirect to="/home" />
           </Route>
         </IonRouterOutlet>
       </IonReactRouter>
