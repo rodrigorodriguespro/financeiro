@@ -24,7 +24,7 @@ export const HomePage: React.FC = () => {
 
     const [selectedMonth] = React.useState(getCurrentMonth());
 
-    const { loading, income, expenses, transactions, tags, goals, goalsConfig } = useDashboardData(
+    const { loading, income, expenses, transactions, goals, goalsConfig } = useDashboardData(
         selectedMonth,
         user?.id,
         0

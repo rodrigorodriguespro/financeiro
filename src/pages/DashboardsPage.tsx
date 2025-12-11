@@ -26,7 +26,7 @@ export const DashboardsPage: React.FC = () => {
 
     const [selectedMonth] = useState(getCurrentMonth());
 
-    const { loading, income, expenses, transactions, tags, goals, goalsConfig, historyData } = useDashboardData(
+    const { loading, income, transactions, tags, goals, goalsConfig, historyData } = useDashboardData(
         selectedMonth,
         user?.id,
         0
@@ -57,32 +57,6 @@ export const DashboardsPage: React.FC = () => {
 
         return Array.from(tagMap.entries()).map(([name, value]) => ({ name, value }));
     }, [transactions, tags]);
-
-    const heatmapData = useMemo(() => {
-        const today = new Date();
-        const start = new Date();
-        start.setDate(start.getDate() - 364);
-        const map = new Map<string, number>();
-        transactions
-            .filter((t) => t.type === 'expense')
-            .forEach((t) => {
-                map.set(t.date, (map.get(t.date) || 0) + 1);
-            });
-
-        const weeks: { date: string; count: number }[][] = [[]];
-        let cursor = new Date(start);
-        while (cursor <= today) {
-            const key = cursor.toISOString().split('T')[0];
-            const currentWeek = weeks[weeks.length - 1];
-            if (currentWeek.length === 7) {
-                weeks.push([]);
-            }
-            weeks[weeks.length - 1].push({ date: key, count: map.get(key) || 0 });
-            cursor.setDate(cursor.getDate() + 1);
-        }
-        const maxCount = weeks.flat().reduce((m, d) => Math.max(m, d.count), 1) || 1;
-        return { weeks, maxCount };
-    }, [transactions]);
 
     const annualPaidIncome = useMemo(() => {
         const map = new Map<string, number>();
